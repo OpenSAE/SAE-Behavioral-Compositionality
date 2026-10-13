@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>📄 arXiv 论文即将上线</b> &nbsp; | &nbsp;
-  <a href="https://uniquemax2005.github.io/sar-compositionality/"><b>🎞️ 5 分钟讲解</b></a> &nbsp; | &nbsp;
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5 分钟讲解</b></a> &nbsp; | &nbsp;
   <a href="#-demo"><b>🧪 Demo</b></a>
 </p>
 
@@ -29,10 +29,10 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 ## 🎞️ 5 分钟讲解
 
 <p align="center">
-  <a href="https://uniquemax2005.github.io/sar-compositionality/"><img src="assets/tour_preview.png" alt="5 分钟讲解" width="900"/></a>
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><img src="assets/tour_preview.png" alt="5 分钟讲解" width="900"/></a>
 </p>
 
-💻 点击预览图即可在浏览器中打开讲解，地址是 <https://uniquemax2005.github.io/sar-compositionality/>。用方向键翻页，按 N 看讲稿，按 D 看每页的细节。同一个页面也是仓库里的独立文件 [`docs/index.html`](docs/index.html)，离线也能打开。
+💻 点击预览图即可在浏览器中打开讲解，地址是 <https://opensae.github.io/SAE-Behavioral-Compositionality/>。用方向键翻页，按 N 看讲稿，按 D 看每页的细节。同一个页面也是仓库里的独立文件 [`docs/index.html`](docs/index.html)，离线也能打开。
 
 ---
 

@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>📄 arXiv paper coming soon</b> &nbsp; | &nbsp;
-  <a href="https://uniquemax2005.github.io/sar-compositionality/"><b>🎞️ 5-minute tutorial</b></a> &nbsp; | &nbsp;
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5-minute tutorial</b></a> &nbsp; | &nbsp;
   <a href="#-demo"><b>🧪 Demo</b></a>
 </p>
 
@@ -27,11 +27,11 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 ## 🎞️ 5-Minute Tutorial
 
 <p align="center">
-  <a href="https://uniquemax2005.github.io/sar-compositionality/"><img src="assets/tour_preview.png" alt="5-minute tutorial" width="900"/></a>
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><img src="assets/tour_preview.png" alt="5-minute tutorial" width="900"/></a>
 </p>
 
 💻 Click the preview to open the tutorial in your browser, or go to
-<https://uniquemax2005.github.io/sar-compositionality/>. Use the arrow keys to move between slides. Press N for the talk
+<https://opensae.github.io/SAE-Behavioral-Compositionality/>. Use the arrow keys to move between slides. Press N for the talk
 track and D for details on each slide. The same page is the single file [`docs/index.html`](docs/index.html), which also
 works offline.
 
