@@ -140,7 +140,7 @@ pip install -r requirements.txt
 ```
 
 `sar.py` needs only NumPy. The demo also needs PyTorch, TransformerLens, SAE Lens and Matplotlib.
-[`requirements-lock.txt`](requirements-lock.txt) pins the exact versions behind the demo output below, run with
+[`requirements_demo.txt`](requirements_demo.txt) pins the exact versions behind the demo output below, run with
 Python 3.12. The tests check the properties the paper relies on. Affine behaviors give zero residual, pairwise games are
 recovered exactly by pairs, and rotations keep the span and the sum of the contributions.
 

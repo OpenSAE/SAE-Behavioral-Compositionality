@@ -111,7 +111,7 @@ python -m venv .venv && source .venv/bin/activate    # Windows 上用 .venv\Scri
 pip install -r requirements.txt
 ```
 
-`sar.py` 只需要 NumPy。demo 另外需要 PyTorch、TransformerLens、SAE Lens 和 Matplotlib。[`requirements-lock.txt`](requirements-lock.txt) 固定了下面 demo 输出所用的确切版本，运行环境是 Python 3.12。测试检查论文依赖的数学性质：仿射行为的残差为零，成对博弈能被成对模型完全恢复，旋转保持贡献的子空间和总和不变。
+`sar.py` 只需要 NumPy。demo 另外需要 PyTorch、TransformerLens、SAE Lens 和 Matplotlib。[`requirements_demo.txt`](requirements_demo.txt) 固定了下面 demo 输出所用的确切版本，运行环境是 Python 3.12。测试检查论文依赖的数学性质：仿射行为的残差为零，成对博弈能被成对模型完全恢复，旋转保持贡献的子空间和总和不变。
 
 ```bash
 python -m pytest
