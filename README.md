@@ -57,7 +57,12 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 
 ## 📐 What SAR Measures
 
-🎯 **The intervention.** For a prompt $`x`$, let $`h_x`$ be the activation at a chosen layer and token. An SAE writes it with
+<details>
+<summary>🎯 The intervention.</summary>
+
+<br>
+
+For a prompt $`x`$, let $`h_x`$ be the activation at a chosen layer and token. An SAE writes it with
 feature activations $`z_i(x)`$ and decoder directions $`d_i`$. Let $`N_x`$ hold the $`K`$ most active features, with decoded
 contributions $`\delta_i(x)=z_i(x)d_i`$. Keeping a subset $`S\subseteq N_x`$ gives
 
@@ -66,7 +71,14 @@ $$\tilde h_x(S)=h_x^0+\sum_{i\in S}\delta_i(x),$$
 where $`h_x^0`$ contains all other activation content, including the reconstruction residual. The patched activation runs
 through the frozen upper layers, and a scalar behavior $`\psi`$ such as a logit difference gives $`g_x(S)`$.
 
-🧩 **SAE Additivity Residuals.** Subsets are drawn by keeping each feature independently with probability $`1/2`$. Let
+</details>
+
+<details>
+<summary>🧩 SAE Additivity Residuals.</summary>
+
+<br>
+
+Subsets are drawn by keeping each feature independently with probability $`1/2`$. Let
 $`\Pi_r g_x`$ be the best approximation of $`g_x`$ that uses terms of at most $`r`$ features, and let $`V`$ be the variance of
 $`g_x`$. Then
 
@@ -75,11 +87,25 @@ $$\mathrm{SAR}_r=\frac{\lVert g_x-\Pi_r g_x\rVert_\mu^2}{V},\qquad \Delta_2=\mat
 $`\mathrm{SAR}_1`$ is the share of behavioral variance not explained by individual feature effects. $`\rho_2`$ is the part
 of that share recovered by feature pairs.
 
-🎲 **Estimation.** With $`K=16`$ we sample 384 subsets per prompt. We fit the order $`r`$ model by least squares on 256 of
+</details>
+
+<details>
+<summary>🎲 Estimation.</summary>
+
+<br>
+
+With $`K=16`$ we sample 384 subsets per prompt. We fit the order $`r`$ model by least squares on 256 of
 them and evaluate it on the other 128. With $`\widehat L_r`$ the held out mean squared error and $`\widehat V`$ the held out
 variance of $`g_x`$, the reported estimate is $`\widehat{\mathrm{SAR}}_r=\widehat L_r/(\widehat V+\epsilon)`$.
 
-✅ **Explanation fidelity.** On the held out subsets $`\mathcal U`$ we also measure how well a fitted model $`\widehat a_r`$
+</details>
+
+<details>
+<summary>✅ Explanation fidelity.</summary>
+
+<br>
+
+On the held out subsets $`\mathcal U`$ we also measure how well a fitted model $`\widehat a_r`$
 orders and selects subsets.
 
 | Metric | Definition | Meaning |
@@ -93,22 +119,43 @@ Here $`\Delta g=g_x(S)-g_x(T)`$ and $`\Delta a=a(S)-a(T)`$ for two independent s
 held out subset, and $`\widehat S_r`$ is the subset the model ranks first. The paper shows
 $`\mathcal E(\Pi_r g_x)\le\mathrm{SAR}_r`$.
 
-🔢 **Numerical conventions.** `sar.py` keeps the conventions of the code behind the paper, so its numbers match the
+</details>
+
+<details>
+<summary>🔢 Numerical conventions.</summary>
+
+<br>
+
+`sar.py` keeps the conventions of the code behind the paper, so its numbers match the
 paper. The estimate uses $`\epsilon=10^{-8}`$. This is negligible for behaviors on the logit scale, but it makes
 $`\widehat{\mathrm{SAR}}_r`$ depend on scale when $`\widehat V`$ is tiny, so `sar` warns when $`\epsilon`$ exceeds 1% of
 $`\widehat V`$. In 4,900 prompts from the paper's experiments, $`\epsilon`$ changes the estimate by at most 1.4%.
 $`\widehat\rho_2`$ is left undefined when $`\widehat{\mathrm{SAR}}_1\le10^{-4}`$. Signs are compared exactly, so a zero
 change on only one side counts as a sign error.
 
-🔄 **Rotated coordinates.** To test whether compositionality depends on the SAE basis, we replace the contributions
+</details>
+
+<details>
+<summary>🔄 Rotated coordinates.</summary>
+
+<br>
+
+To test whether compositionality depends on the SAE basis, we replace the contributions
 $`D_x=[\delta_1,\dots,\delta_K]`$ by $`D_xQ`$, where $`Q`$ is a random orthogonal matrix with $`Q\mathbf 1=\mathbf 1`$. This
 keeps the selected subspace, the total contribution, and the upper layers unchanged.
+
+</details>
 
 ---
 
 ## 🔎 Comparison of Methods
 
-🔗 **Explaining a combination of features.** A common way to explain what several features do together is to add up what
+<details>
+<summary>🔗 Explaining a combination of features.</summary>
+
+<br>
+
+A common way to explain what several features do together is to add up what
 each one does alone. This is the first order model. We compare it with the pairwise model and with a control that adds
 the same number of random terms of three features. All models are fit on the same 256 subsets and judged on the same
 128 held out subsets. Numbers are averages over 18 model and behavior settings.
@@ -119,7 +166,14 @@ the same number of random terms of three features. All models are fit on the sam
 | 🏆 **Pairwise, one effect per feature and per pair** | 137 | ✅ **0.9959** | ✅ lower in 18 of 18 settings |
 | Random third order control | 137 | ❌ below pairwise in 18 of 18 settings | ❌ above pairwise in 18 of 18 settings |
 
-⚖️ **Evaluating an SAE.** SAE quality is usually reported as reconstruction error. For six SAEs at the same Gemma-3 1B
+</details>
+
+<details>
+<summary>⚖️ Evaluating an SAE.</summary>
+
+<br>
+
+SAE quality is usually reported as reconstruction error. For six SAEs at the same Gemma-3 1B
 site, we compare how reconstruction error and $`\widehat{\mathrm{SAR}}_1`$ relate to two failures of first order
 explanations. The numbers are prompt level Spearman correlations over three behaviors.
 
@@ -127,6 +181,8 @@ explanations. The numbers are prompt level Spearman correlations over three beha
 |---|---|:---:|:---:|
 | Reconstruction error $`\mathrm{FVU}_x`$ | How well the SAE rebuilds the activation | ❌ −0.114 to −0.013 | ❌ 0.005 to 0.028 |
 | 🏆 $`\widehat{\mathrm{SAR}}_1`$ | Behavior left unexplained by individual feature effects | ✅ **0.269 to 0.430** | ✅ **0.199 to 0.235** |
+
+</details>
 
 ---
 
