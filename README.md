@@ -2,7 +2,7 @@
 
 🌍 Languages: [English](README.md) | [中文](README_cn.md) |
 
-👉 TL;DR. SAE features are decoded linearly, but their effects on model behavior depend on their interactions. We introduce **SAE Additivity Residuals (SAR)** to measure the behavioral variation left unexplained by individual feature effects.
+👉 TL;DR. SAE features are decoded linearly, but their effects on model behavior may depend on mutual interactions. We introduce **SAE Additivity Residuals (SAR)** to measure the behavioral variation left unexplained by individual feature effects.
 
 <p align="center">
   <b>📄 arXiv paper coming soon</b> &nbsp; | &nbsp;
