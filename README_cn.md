@@ -34,6 +34,8 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 
 💻 点击预览图即可在浏览器中打开讲解，地址是 <https://opensae.github.io/SAE-Behavioral-Compositionality/>。
 
+☁️ **Colab 在线体验：** [交互式入门](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/SAR_Quickstart.ipynb) · [使用自己的 SAE](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/Use_Your_Own_SAE.ipynb)
+
 ---
 
 ## ✨ 亮点
