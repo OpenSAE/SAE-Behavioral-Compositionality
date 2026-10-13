@@ -31,9 +31,7 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 </p>
 
 💻 Click the preview to open the tutorial in your browser, or go to
-<https://opensae.github.io/SAE-Behavioral-Compositionality/>. Use the arrow keys to move between slides. Press N for the talk
-track and D for details on each slide. The same page is the single file [`docs/index.html`](docs/index.html), which also
-works offline.
+<https://opensae.github.io/SAE-Behavioral-Compositionality/>.
 
 ---
 
