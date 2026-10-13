@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAR in Five Minutes</title>
+<meta name="description" content="A five-minute interactive tour of behavioral compositionality in sparse autoencoders: why feature effects do not simply add up, the SAR measurement, SAE versus rotated coordinates, the pairwise repair, and combined steering.">
+
+<!-- === FONTS === Signal system: Source Serif 4 (voice), DM Sans (substance), IBM Plex Mono (metadata) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME TOKENS (Signal)
+   Gold is the only decorative accent. DELIBERATE DEVIATION: --pos/--neg are
+   DATA-ONLY encodings (removing a pair does more / less than the sum of its
+   single effects; misses), plus the case-study bar greys. They never style text or chrome.
+   =========================================== */
+:root {
+    --navy: #1C2644; --navy-alt: #232F55; --cream: #F0ECE3; --cream-alt: #E6E0D4;
+    --text-warm: #E2DCD0; --text-muted-dark: #8A96A8; --text-hint-dark: #5E6A80;
+    --ink: #1A2030; --text-muted-light: #5A6270; --text-hint-light: #8E949C;
+    --gold: #C8A870; --gold-deep: #9C7C43;
+    --border-dark: #2E3D5C; --border-light: #CAC4B4;
+    --pos-light: #B5462F; --neg-light: #2F6F73;
+    --pos-dark: #E0735A;  --neg-dark: #58A9AB;
+    --serif: 'Source Serif 4', 'Noto Serif SC', Georgia, serif;
+    --sans: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+    --pad-x: 144px; --pad-y: 56px; --gap-md: 24px; --gap-sm: 12px;
+    --ease-slide: cubic-bezier(0.77, 0, 0.175, 1); --ease-in: cubic-bezier(0.16, 1, 0.3, 1);
+    --stage-bg: #10162a;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stage-bg: #0b1020; } }
+:root[data-theme="dark"] { --stage-bg: #0b1020; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+#editToggle, #editHotzone { display: none !important; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (frontend-slides viewport-base.css, verbatim)
+   =========================================== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+@media print {
+    html,
+    body {
+        width: 1920px;
+        height: auto;
+        overflow: visible;
+        background: #fff;
+    }
+    .deck-viewport {
+        position: static;
+        overflow: visible;
+        background: #fff;
+    }
+    .deck-stage {
+        position: static;
+        width: auto;
+        height: auto;
+        transform: none !important;
+        background: none;
+    }
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px;
+        height: 1080px;
+        break-after: page;
+        page-break-after: always;
+    }
+    .slide:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+    .deck-controls {
+        display: none !important;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   SURFACES + FRAME
+   =========================================== */
+.slide { transition: opacity 0.45s var(--ease-slide), visibility 0.45s; }
+.slide.dark  { --slide-bg: var(--navy);  background: var(--navy);  color: var(--text-warm); }
+.slide.light { --slide-bg: var(--cream); background: var(--cream); color: var(--ink); }
+.slide.dark::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 80px 80px;
+}
+.frame { position: relative; height: 100%; display: grid; grid-template-rows: auto 1fr auto; padding: var(--pad-y) var(--pad-x); }
+.chrome, .foot { display: flex; justify-content: space-between; align-items: center; font: 500 14px/1.4 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; }
+.chrome { padding-bottom: var(--gap-sm); margin-bottom: 22px; border-bottom: 1px solid; }
+.foot   { padding-top: var(--gap-sm); margin-top: 18px; border-top: 1px solid; letter-spacing: 0.12em; }
+.dark  .chrome, .dark  .foot { border-color: var(--border-dark);  color: var(--text-muted-dark); }
+.light .chrome, .light .foot { border-color: var(--border-light); color: var(--text-muted-light); }
+.nc { text-transform: none; letter-spacing: 0.02em; }
+.chr-right { display: flex; align-items: center; gap: 22px; }
+
+/* === ROADMAP (chrome left) === */
+.road { display: flex; gap: 22px; }
+.road span { opacity: 0.45; }
+.road span.on { opacity: 1; color: var(--gold); }
+.light .road span.on { color: var(--gold-deep); }
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+.kicker { font: 500 15px/1.4 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); display: flex; align-items: center; gap: 16px; }
+.light .kicker { color: var(--gold-deep); }
+.kicker::after { content: ""; width: 36px; height: 1px; background: var(--gold); }
+.h1 { font: 600 96px/1.06 var(--serif); letter-spacing: -0.01em; }
+.h2 { font: 600 50px/1.14 var(--serif); letter-spacing: -0.005em; margin-top: 16px; }
+.h1 em, .h2 em, .h3 em { font-style: italic; color: var(--gold); font-weight: 500; }
+.light .h2 em, .light .h3 em { color: var(--gold-deep); }
+.h3 { font: 500 30px/1.25 var(--serif); }
+.lead { font: 400 25px/1.5 var(--sans); margin-top: 16px; }
+.body { font: 400 20px/1.6 var(--sans); }
+.caption { font: 400 16px/1.5 var(--sans); }
+.dark  .lead, .dark .caption { color: var(--text-muted-dark); }
+.light .lead, .light .caption { color: var(--text-muted-light); }
+.lead em, .body em, .caption em { font-family: var(--serif); font-style: italic; color: var(--gold); }
+.light .lead em, .light .body em, .light .caption em { color: var(--gold-deep); }
+.lead b, .body b { font-weight: 500; }
+.dark .lead b, .dark .body b { color: var(--text-warm); }
+.light .lead b, .light .body b { color: var(--ink); }
+.label { font: 500 14px/1.4 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; }
+.dark  .label { color: var(--text-muted-dark); }
+.light .label { color: var(--text-muted-light); }
+.stat { font: 600 72px/1 var(--serif); letter-spacing: -0.02em; color: var(--gold); }
+.light .stat { color: var(--gold-deep); }
+.stat small { font: 500 20px/1 var(--mono); letter-spacing: 0.02em; margin-left: 10px; }
+.dark .stat small { color: var(--text-muted-dark); }
+.light .stat small { color: var(--text-muted-light); }
+.math { font-family: var(--serif); font-style: italic; }
+.math sub, .math sup { font-size: 0.66em; }
+.mono { font-family: var(--mono); }
+
+/* === ENTRANCE ANIMATION === */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.7s var(--ease-in), transform 0.7s var(--ease-in); }
+.slide.visible .reveal { opacity: 1; transform: none; }
+.slide.visible .d1 { transition-delay: 0.06s; } .slide.visible .d2 { transition-delay: 0.14s; }
+.slide.visible .d3 { transition-delay: 0.22s; } .slide.visible .d4 { transition-delay: 0.30s; }
+.slide.visible .d5 { transition-delay: 0.38s; }
+
+/* ===========================================
+   SHARED CONTROLS (toggles, chips, buttons, sliders)
+   =========================================== */
+.seg { display: inline-flex; border: 1px solid; }
+.dark .seg { border-color: var(--border-dark); } .light .seg { border-color: var(--border-light); }
+.seg button { font: 500 14px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 13px 18px; background: transparent; border: 0; border-right: 1px solid; cursor: pointer; }
+.dark .seg button { color: var(--text-muted-dark); border-color: var(--border-dark); }
+.light .seg button { color: var(--text-muted-light); border-color: var(--border-light); }
+.seg button:last-child { border-right: 0; }
+.dark .seg button[aria-pressed="true"] { background: var(--gold); color: var(--navy); }
+.light .seg button[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
+.chipset { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 14px/1 var(--mono); letter-spacing: 0.06em; padding: 11px 14px; background: transparent; border: 1px solid; cursor: pointer; }
+.dark .chip { color: var(--text-warm); border-color: var(--border-dark); }
+.light .chip { color: var(--ink); border-color: var(--border-light); }
+.dark .chip[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); box-shadow: inset 0 -3px 0 var(--gold); }
+.light .chip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+.btn { font: 500 14px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; padding: 14px 20px; border: 1px solid var(--gold); color: var(--gold); background: transparent; cursor: pointer; }
+.light .btn { border-color: var(--ink); color: var(--ink); }
+.btn.primary { background: var(--gold); color: var(--navy); }
+.light .btn.primary { background: var(--ink); color: var(--cream); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #56668C; }
+input[type=range]::-moz-range-track { height: 2px; background: #56668C; }
+.light input[type=range]::-webkit-slider-runnable-track { background: var(--border-light); }
+.light input[type=range]::-moz-range-track { background: var(--border-light); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--gold); margin-top: -9px; border: 0; }
+input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--gold); border: 0; }
+.light input[type=range]::-webkit-slider-thumb { background: var(--gold-deep); }
+.light input[type=range]::-moz-range-thumb { background: var(--gold-deep); }
+input[type=range]:disabled { opacity: 0.35; cursor: not-allowed; }
+.hair { border-top: 1px solid; }
+.dark .hair { border-color: var(--border-dark); } .light .hair { border-color: var(--border-light); }
+.sw { width: 16px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 26px; }
+
+/* === DETAILS DRAWER (press D) === */
+.details-btn { font: 500 13px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; background: transparent; border: 1px solid; padding: 8px 12px; cursor: pointer; }
+.dark .details-btn { color: var(--gold); border-color: var(--gold); } .light .details-btn { color: var(--gold-deep); border-color: var(--gold-deep); }
+.drawer {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 700px; z-index: 20; padding: 64px 64px 56px;
+    transform: translateX(102%); transition: transform 0.45s var(--ease-in); overflow: hidden; display: flex; flex-direction: column;
+}
+.dark .drawer { background: #161E38; border-left: 1px solid var(--border-dark); }
+.light .drawer { background: #E8E3D7; border-left: 1px solid var(--border-light); }
+.slide.drawer-open .drawer { transform: none; }
+.drawer .h3 { margin: 14px 0 10px; }
+.drawer .body { font-size: 18px; line-height: 1.55; }
+.drawer .body p + p { margin-top: 10px; }
+.drawer table { border-collapse: collapse; width: 100%; font: 400 16px/1.3 var(--mono); margin-top: 10px; }
+.drawer td, .drawer th { padding: 6px 8px; text-align: right; border-bottom: 1px solid; }
+.drawer th:first-child, .drawer td:first-child { text-align: left; }
+.dark .drawer td, .dark .drawer th { border-color: var(--border-dark); }
+.light .drawer td, .light .drawer th { border-color: var(--border-light); }
+.drawer th { font-weight: 500; letter-spacing: 0.06em; }
+.drawer .close { position: absolute; top: 22px; right: 26px; }
+.drawer .src { margin-top: auto; padding-top: 14px; font: 400 13px/1.45 var(--mono); letter-spacing: 0.02em; }
+.dark .drawer .src { color: var(--text-hint-dark); } .light .drawer .src { color: var(--text-hint-light); }
+
+/* ===========================================
+   SLIDE 0 — COVER
+   =========================================== */
+.cover { position: relative; height: 100%; padding: 104px var(--pad-x) 80px; display: flex; flex-direction: column; }
+.cover .h1 { margin-top: 30px; max-width: 1520px; }
+.cover .lead { margin-top: 30px; max-width: 1300px; font-size: 28px; }
+.route { margin-top: auto; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border-dark); }
+.route > div { padding: 22px 22px 0 0; }
+.route .n { font: 600 44px/1 var(--serif); color: var(--gold); }
+.route .t { margin-top: 10px; font: 400 21px/1.35 var(--sans); color: var(--text-warm); }
+.byline { margin-top: 36px; display: flex; justify-content: space-between; font: 500 15px/1.4 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted-dark); }
+.byline b { color: var(--text-warm); font-weight: 500; }
+.keyhint { position: absolute; top: 48px; right: var(--pad-x); font: 500 13px/1.6 var(--mono); letter-spacing: 0.12em; color: var(--text-hint-dark); text-align: right; text-transform: uppercase; }
+.keyhint kbd { font-family: var(--mono); border: 1px solid var(--border-dark); padding: 1px 6px; color: var(--text-muted-dark); }
+
+
+/* ===========================================
+   SLIDE 1 — THE PROBLEM (real prompt: every pair of the 16 features)
+   =========================================== */
+.p1 { display: grid; grid-template-columns: 880px 1fr; gap: 64px; min-height: 0; }
+.pipe { margin-top: 26px; display: grid; grid-template-columns: repeat(9, auto); align-items: center; justify-content: start; gap: 0; }
+.pipe .box { font: 500 14px/1.25 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; padding: 12px 12px; border: 1px solid var(--border-light); color: var(--text-muted-light); min-width: 120px; }
+.pipe .box.hl { border-color: var(--ink); color: var(--ink); }
+.pipe .arr { color: var(--text-hint-light); padding: 0 8px; font: 400 20px/1 var(--mono); }
+.promptbox { margin-top: 26px; border-top: 1px solid var(--border-light); padding-top: 14px; }
+.prompt-text { margin-top: 8px; font: 400 27px/1.4 var(--serif); }
+.prompt-text .next { font-style: italic; color: var(--gold-deep); }
+.pick { margin-top: 16px; display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: start; }
+.pgrid { display: grid; grid-template-columns: 24px repeat(15, 20px); grid-auto-rows: 20px; gap: 2px; }
+.pgrid .lab { font: 500 11px/20px var(--mono); color: var(--text-hint-light); text-align: center; }
+.pcell { width: 20px; height: 20px; border: 0; padding: 0; cursor: pointer; }
+.pcell:hover { outline: 2px solid var(--gold-deep); position: relative; z-index: 2; }
+.pcell[aria-pressed="true"] { outline: 3px solid var(--ink); position: relative; z-index: 3; }
+.pick-key { padding-top: 26px; }
+.pick-key .caption { margin-top: 10px; max-width: 360px; }
+.pick-key .legend { margin-top: 14px; flex-direction: column; gap: 8px; }
+.p1-right { border-left: 1px solid var(--border-light); padding-left: 56px; display: flex; flex-direction: column; min-height: 0; }
+.behav { font: 400 24px/1.4 var(--serif); color: var(--ink); }
+.p1-pair { margin-top: 12px; font: 400 21px/1.35 var(--sans); color: var(--text-muted-light); }
+.p1-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 22px; }
+.p1-stats .caption { margin-top: 8px; }
+.p1-stats .stat { font-size: 104px; }
+#p1Bars { width: 100%; height: 400px; margin-top: 30px; overflow: visible; }
+.question { margin-top: 24px; font: italic 400 25px/1.4 var(--serif); color: var(--gold-deep); }
+
+/* ===========================================
+   SLIDE 2 — THE MEASUREMENT (toy: guess the pair, reveal, switch the model)
+   =========================================== */
+.sel-grid { display: grid; grid-template-columns: 930px 1fr; gap: 64px; min-height: 0; }
+.sel-left .h2 { font-size: 44px; }
+.task { margin-top: 12px; font: 400 21px/1.5 var(--sans); color: var(--text-muted-dark); min-height: 64px; }
+.task b { color: var(--text-warm); font-weight: 500; }
+table.coal { margin-top: 4px; border-collapse: separate; border-spacing: 4px 3px; margin-left: -4px; }
+table.coal th { font: 500 13px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted-dark); font-weight: 500; padding-bottom: 4px; }
+.fh { width: 62px; height: 40px; font: italic 500 24px/1 var(--serif); color: var(--text-warm); background: transparent; border: 1px solid var(--border-dark); cursor: pointer; position: relative; transition: background 0.3s, color 0.3s; }
+.fh.guessed { border-color: var(--gold); color: var(--gold); }
+.fh.keep { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.fh .mk { position: absolute; top: -12px; right: -10px; font: 600 14px/1 var(--mono); padding: 3px 5px; background: var(--navy); border: 1px solid var(--border-dark); }
+.fh .mk.ok { color: var(--gold); } .fh .mk.no { color: var(--text-muted-dark); }
+.fh .mk:empty { display: none; }
+td.k { width: 62px; height: 27px; text-align: center; font: 500 15px/1 var(--mono); background: var(--navy-alt); color: var(--text-hint-dark); transition: box-shadow 0.3s; }
+td.k.on { color: var(--text-warm); background: #34416B; }
+td.k.pairhit { box-shadow: inset 0 0 0 2px var(--gold); }
+td.gv, td.pv { width: 104px; text-align: right; padding-right: 14px; font: 500 16px/1 var(--mono); color: var(--text-warm); }
+td.pv { color: var(--gold); }
+td.miss { width: 280px; position: relative; }
+td.miss .mb { position: absolute; top: 3px; height: 22px; left: 140px; background: var(--pos-dark); transition: width 0.35s, left 0.35s, background 0.35s; }
+td.miss .mz { position: absolute; top: 2px; bottom: 2px; left: 140px; width: 1px; background: var(--border-dark); }
+td.miss .mt { position: absolute; right: -54px; top: 6px; font: 500 13px/1 var(--mono); color: var(--text-muted-dark); width: 50px; text-align: right; }
+table.coal.hide-pred .pv, table.coal.hide-pred .miss { visibility: hidden; }
+.sel-right { border-left: 1px solid var(--border-dark); padding-left: 56px; display: flex; flex-direction: column; min-height: 0; }
+.rule-seg { margin-top: 12px; }
+.rule-seg button { padding: 15px 22px; font-size: 15px; }
+.rule-seg button:disabled { opacity: 0.35; cursor: not-allowed; }
+.rule-desc { margin-top: 16px; font: 400 21px/1.5 var(--sans); color: var(--text-warm); min-height: 96px; }
+.result { margin-top: 22px; border-top: 1px solid var(--border-dark); padding-top: 18px; }
+.result .stat { font-size: 64px; margin-top: 8px; }
+.vbar { margin-top: 22px; display: flex; height: 30px; background: var(--navy-alt); }
+.vbar i { display: block; height: 100%; transition: width 0.45s var(--ease-in); }
+.vbar .v1 { background: var(--gold); } .vbar .v2 { background: #8E7A52; } .vbar .v3 { background: var(--pos-dark); }
+.vleg { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px 22px; }
+.result .caption { margin-top: 12px; }
+.btns { display: flex; gap: 12px; margin-top: auto; padding-top: 14px; }
+
+/* ===========================================
+   SLIDE 3 — THE PATTERN (1,800 prompts, SAE vs rotated coordinates)
+   =========================================== */
+.atlas { display: grid; grid-template-columns: 1150px 1fr; gap: 60px; min-height: 0; }
+#rotSvg { width: 1150px; height: 600px; margin-top: 12px; overflow: visible; }
+.side { border-left: 1px solid var(--border-light); padding-left: 50px; display: flex; flex-direction: column; }
+.side .blk { border-top: 1px solid var(--border-light); padding: 18px 0 20px; }
+.side .blk:first-child { border-top: 0; padding-top: 4px; }
+.side .stat { font-size: 64px; margin-top: 10px; }
+.side .caption { margin-top: 8px; max-width: 470px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--cream); font: 500 15px/1.35 var(--mono); padding: 9px 13px; opacity: 0; transition: opacity 0.15s; z-index: 5; white-space: nowrap; }
+
+/* ===========================================
+   SLIDE 4 — THE REPAIR (same prompt, three predictors)
+   =========================================== */
+.acc { display: grid; grid-template-columns: 700px 1fr; gap: 70px; min-height: 0; }
+.acc-left { display: flex; flex-direction: column; }
+.eq { margin-top: 26px; border-top: 1px solid var(--border-dark); padding-top: 14px; }
+.eq .line { font: italic 400 30px/1.35 var(--serif); color: var(--text-warm); margin-top: 10px; }
+.eq .line b { font-style: normal; font-weight: 500; color: var(--gold); }
+.eq .line.small { font-size: 22px; color: var(--text-muted-dark); }
+.acc-stat { margin-top: 56px; border-top: 1px solid var(--border-dark); padding-top: 18px; }
+.acc-stat .stat { font-size: 64px; }
+.acc-stat .caption { margin-top: 10px; font-size: 19px; max-width: 620px; }
+.acc-right { border-left: 1px solid var(--border-dark); padding-left: 56px; display: flex; flex-direction: column; }
+#fitSvg { width: 100%; height: 540px; margin-top: 8px; overflow: visible; }
+.fpt { transition: cx 0.5s var(--ease-in), cy 0.5s var(--ease-in); }
+.fres { transition: x 0.5s var(--ease-in), y 0.5s var(--ease-in), height 0.5s var(--ease-in); }
+.acc-ctrl { margin-top: 10px; }
+.acc-ctrl .seg button { padding: 14px 16px; }
+.verdictline { font: 400 21px/1.5 var(--sans); margin-top: 16px; min-height: 64px; color: var(--text-warm); }
+.verdictline b { color: var(--gold); font-weight: 600; } .verdictline b.neg { color: var(--pos-dark); }
+
+/* ===========================================
+   SLIDE 5 — THE PAYOFF (steering combinations)
+   =========================================== */
+.pay { display: grid; grid-template-columns: 1040px 1fr; gap: 60px; min-height: 0; }
+#steerSvg { width: 1040px; height: 600px; margin-top: 4px; overflow: visible; }
+.spt { transition: cx 0.5s var(--ease-in); }
+.pay-right { border-left: 1px solid var(--border-light); padding-left: 52px; display: flex; flex-direction: column; }
+.pay-right .seg button { padding: 14px 18px; font-size: 14px; }
+.bars { margin-top: 48px; border-top: 1px solid var(--border-light); padding-top: 16px; }
+.mrow { margin-top: 22px; }
+.mrow .ml { font: 400 18px/1.2 var(--sans); color: var(--ink); }
+.mrow .ml small { font: 400 15px/1 var(--sans); color: var(--text-muted-light); }
+.mbar { display: grid; grid-template-columns: 124px 1fr 80px; align-items: center; gap: 10px; margin-top: 8px; opacity: 0.5; transition: opacity 0.3s; }
+.mbar.on { opacity: 1; }
+.mbar .mn { font: 500 13px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted-light); }
+.mbar .bt { height: 14px; background: var(--cream-alt); position: relative; }
+.mbar .bf { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+.mbar.on .bf { background: var(--gold-deep); }
+.mbar .bv { font: 600 22px/1 var(--serif); color: var(--gold-deep); text-align: right; }
+
+/* ===========================================
+   SLIDE 6 — TAKEAWAYS
+   =========================================== */
+.take { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 56px; border-top: 1px solid var(--border-dark); }
+.take > div { padding: 26px 40px 0 0; }
+.take > div + div { padding-left: 40px; border-left: 1px solid var(--border-dark); }
+
+.take .h3 { margin-top: 0; }
+.take .body { margin-top: 14px; color: var(--text-muted-dark); font-size: 22px; }
+.notclaim { margin-top: 64px; display: grid; grid-template-columns: 1fr; gap: 50px; border-top: 1px solid var(--border-dark); padding-top: 22px; }
+.dash { list-style: none; margin-top: 10px; }
+.dash li { position: relative; padding-left: 30px; font: 400 20px/1.5 var(--sans); color: var(--text-muted-dark); margin-top: 6px; }
+.dash li::before { content: "—"; position: absolute; left: 0; font-family: var(--mono); color: var(--gold); }
+
+
+/* ===========================================
+   MATH (native MathML) AND SMALL FIXES
+   =========================================== */
+/* Text fonts have no OpenType MATH table, so hats drift and sum limits go to the side. */
+math { font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", "STIX Math", math, serif; font-size: 1.04em; }
+.mline { margin: 8px 0; }
+.eq .mline { font-size: 30px; color: var(--text-warm); }
+.result .mline.big { font-size: 28px; margin: 4px 0 2px; color: var(--text-warm); }
+.mrow .mline.small { font-size: 17px; margin: 4px 0 2px; color: var(--ink); }
+.drawer .mline { font-size: 22px; margin: 10px 0; }
+.result .stat math, .verdictline math { font-size: 1em; }
+.h2 sub, .stat sub, .h3 sub { font-size: 0.6em; line-height: 0; vertical-align: -0.22em; }
+body.track .slide.active table.coal th[data-say]::after { left: 50%; top: -38px; margin-left: -15px; }
+
+/* Only things that can be clicked look like buttons (advisor rule). */
+.pipe .box, .pipe .box.hl { border: 0; padding: 6px 2px; min-width: 0; }
+.pipe .box.hl { color: var(--ink); font-weight: 600; }
+.pipe .arr { padding: 0 14px; }
+.btns.big { margin: 6px 0 14px; padding-top: 0; gap: 16px; }
+.btns.big .btn { font-size: 19px; padding: 18px 34px; letter-spacing: 0.12em; }
+.fh:disabled { cursor: default; }
+.fh:not(:disabled):hover { border-color: var(--gold); color: var(--gold); }
+td.k { height: 24px; }
+table.coal { border-spacing: 4px 2px; }
+
+/* Section links: the chrome roadmap and the cover route jump to their slide. */
+.road { gap: 6px; }
+.road .nav { background: none; border: 0; padding: 4px 10px; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; opacity: 0.6; cursor: pointer; }
+.road .nav:first-child { padding-left: 0; }
+.road .nav:hover { opacity: 1; text-decoration: underline; text-underline-offset: 5px; }
+.road .nav.on { opacity: 1; color: var(--gold); }
+.light .road .nav.on { color: var(--gold-deep); }
+.route .ri { background: none; border: 0; text-align: left; padding: 22px 22px 0 0; font: 400 23px/1.35 var(--sans); color: var(--text-warm); cursor: pointer; }
+.route .ri:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 6px; }
+
+/* ===========================================
+   PRESENTER NOTES (press N) / HELP (press ?) — outside the stage
+   =========================================== */
+aside.notes { display: none; }
+/* Talk track: every content element carries data-say="N"; the notes explain N in order.
+   Pressing N shows the notes panel AND these numbered badges on the slide. */
+[data-say] { position: relative; }
+body.track .slide.active [data-say]::after {
+    content: attr(data-say); position: absolute; top: -4px; left: -44px; z-index: 30;
+    width: 30px; height: 30px; border-radius: 50%; background: var(--gold); color: var(--navy);
+    font: 600 16px/30px var(--mono); text-align: center; letter-spacing: 0; text-transform: none;
+    box-shadow: 0 0 0 3px rgba(12,17,33,0.35); pointer-events: none;
+}
+#notesPanel ol.track { list-style: none; margin: 4px 0 0; }
+#notesPanel ol.track li { position: relative; padding-left: 38px; margin-top: 10px; }
+#notesPanel ol.track li::before { content: attr(data-for); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: var(--navy); font: 600 14px/26px var(--mono); text-align: center; }
+#notesPanel { position: fixed; top: 0; right: 0; bottom: 0; width: clamp(340px, 30vw, 620px); overflow: auto; z-index: 1002; background: #0C1121; color: #E2DCD0; border-left: 2px solid var(--gold); padding: 20px 24px 84px; font: 400 16px/1.55 var(--sans); display: none; }
+#notesPanel.show { display: block; }
+#notesPanel h4 { font: 500 12px/1.4 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin: 10px 0 4px; }
+#notesPanel p { max-width: none; }
+#notesPanel .zh { color: #B9C2D0; }
+#notesPanel .time { float: right; font: 500 12px/1 var(--mono); color: #8A96A8; letter-spacing: 0.1em; }
+#helpPanel { position: fixed; inset: 0; z-index: 1003; background: rgba(12,17,33,0.86); display: none; align-items: center; justify-content: center; }
+#helpPanel.show { display: flex; }
+#helpPanel .card { background: var(--cream); color: var(--ink); padding: 26px 34px; font: 400 15px/1.8 var(--mono); min-width: 360px; }
+#helpPanel kbd { display: inline-block; min-width: 64px; font-weight: 500; }
+
+/* === DECK CONTROLS === */
+.deck-controls { left: auto; right: 18px; bottom: 18px; transform: none; transition: opacity 0.4s; display: flex; align-items: center; gap: 10px; font: 500 13px/1 var(--mono); letter-spacing: 0.14em; color: #b9bfcc; background: rgba(16,22,42,0.78); padding: 8px 10px; }
+.deck-controls button { background: transparent; border: 1px solid #3a4666; color: #d9d4c8; min-width: 34px; height: 30px; cursor: pointer; font: 500 13px/1 var(--mono); padding: 0 8px; }
+.deck-controls.idle { opacity: 0; pointer-events: none; }
+body.notes-on .deck-controls { bottom: 18px; right: 18px; }
+.progress { position: fixed; left: 0; top: 0; height: 3px; background: var(--gold); z-index: 1001; transition: width 0.4s var(--ease-slide); }
+.rotate-hint { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1001; font: 500 12px/1.3 var(--mono); letter-spacing: 0.1em; color: #d9d4c8; background: rgba(16,22,42,0.85); padding: 8px 12px; text-align: center; }
+@media (orientation: portrait) and (max-width: 820px) { .rotate-hint { display: block; } }
+
+/* === INLINE EDITING (press E) === */
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle { position: fixed; top: 16px; left: 16px; z-index: 10001; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; background: var(--gold); color: var(--navy); border: 0; font: 500 12px/1 var(--mono); letter-spacing: 0.14em; padding: 10px 12px; cursor: pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+body.editing [data-editable] { outline: 1px dashed var(--gold); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="rotate-hint">Rotate your phone for a larger view</div>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">EDIT</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ==================================================================
+     SLIDE 0 — COVER
+     ================================================================== -->
+<section class="slide dark active visible" data-title="Cover">
+  <div class="cover">
+    <h1 class="h1 reveal d2" data-editable>Behavioral <em>Compositionality</em> of Sparse Autoencoder Representations</h1>
+    <p class="lead reveal d3" data-say="1" data-editable>If the effects of individual SAE features are known, can their joint effect be predicted by summing them?</p>
+    <nav class="route reveal d4" data-say="2" aria-label="Sections">
+      <button class="ri" data-go="2">Feature effects need not add up</button>
+      <button class="ri" data-go="3">SAE Additivity Residuals</button>
+      <button class="ri" data-go="4">SAE coordinates and random rotations</button>
+      <button class="ri" data-go="5">Pairwise terms</button>
+      <button class="ri" data-go="6">Combined steering</button>
+    </nav>
+    <div class="byline reveal d5">
+      <span data-editable><b>Haotian Ma, Ziye Mei, Frederic Sala</b></span>
+      <span data-editable>University of Wisconsin–Madison</span>
+    </div>
+  </div>
+  <aside class="notes">
+    <span class="time">~20 s</span>
+    <h4>Talk track</h4>
+    <ol class="track">
+      <li data-for="1">SAE features are read one at a time, but explanations, circuits and steering use several of them together. This talk asks whether their effects add up when they are combined.</li>
+      <li data-for="2">There are five steps. We show the problem, define the measure, compare coordinates, look at feature pairs, and end with steering.</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ==================================================================
+     SLIDE 1 — THE PROBLEM (real prompt; every pair of its 16 features)
+     ================================================================== -->
+<section class="slide light" data-title="The problem">
+  <div class="frame">
+    <div class="chrome"><nav class="road" aria-label="Sections"><button class="nav on" data-go="2">Problem</button><button class="nav" data-go="3">SAR</button><button class="nav" data-go="4">Coordinates</button><button class="nav" data-go="5">Pairs</button><button class="nav" data-go="6">Steering</button></nav><span class="chr-right"><button class="details-btn" data-details>Details</button></span></div>
+    <div class="p1">
+      <div style="display:flex;flex-direction:column;min-height:0">
+        <h2 class="h2 reveal d2" data-editable>Individual feature effects <em>need not add up</em></h2>
+        <div class="pipe reveal d3" aria-label="Pipeline" data-say="1" style="margin-top:32px">
+          <div class="box hl">Prompt</div><div class="arr">→</div>
+          <div class="box">Layer 21</div><div class="arr">→</div>
+          <div class="box hl">16 SAE features</div><div class="arr">→</div>
+          <div class="box">Remove some</div><div class="arr">→</div>
+          <div class="box hl">“she” or “he”</div>
+        </div>
+        <div class="promptbox reveal d4" data-say="2">
+          <div class="prompt-text">After Emily went to the store, <span class="next">she / he</span></div>
+          <div class="caption" style="margin-top:6px">Click a cell to remove that pair of features.</div>
+          <div class="pick">
+            <div class="pgrid" id="pairGrid" aria-label="Every pair of the 16 features"></div>
+            <div class="pick-key">
+              <div class="legend caption">
+                <span><i class="sw" style="background:var(--pos-light)"></i>Joint effect larger than the sum</span>
+                <span><i class="sw" style="background:var(--neg-light)"></i>Joint effect smaller than the sum</span>
+                <span><i class="sw" style="background:#E3DDD0"></i>Effects add up</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="question reveal d5" data-say="5">How much of the behavior do individual feature effects miss?</div>
+      </div>
+      <div class="p1-right reveal d3">
+        <div class="behav">Behavior <math><mi>g</mi><mo>=</mo><mi>logit</mi><mo stretchy="false">(</mo><mtext>she</mtext><mo stretchy="false">)</mo><mo>&#x2212;</mo><mi>logit</mi><mo stretchy="false">(</mo><mtext>he</mtext><mo stretchy="false">)</mo></math></div>
+        <div class="p1-pair" id="p1Pair"></div>
+        <div class="p1-stats">
+          <div data-say="3"><div class="stat" id="p1Pred">—</div><div class="caption">Predicted by adding single effects</div></div>
+          <div data-say="4"><div class="stat" id="p1Act" style="color:var(--pos-light)">—</div><div class="caption">Model output</div></div>
+        </div>
+        <div data-say="4"><svg id="p1Bars" viewBox="0 0 620 400" role="img" aria-label="Behavior after removing each feature and both"></svg></div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer" aria-label="Details">
+    <button class="details-btn close" data-details>Close</button>
+    <div class="h3">The intervention</div>
+    <div class="body"><p>At layer 21 and the last token, the activation <math><msub><mi>h</mi><mi>x</mi></msub></math> is split into the 16 most active SAE contributions <math><msub><mi>&#x3B4;</mi><mi>i</mi></msub><mo>=</mo><msub><mi>z</mi><mi>i</mi></msub><msub><mi>d</mi><mi>i</mi></msub></math> and all other activation content <math><msubsup><mi>h</mi><mi>x</mi><mn>0</mn></msubsup></math>, which includes the reconstruction residual. Keeping a subset <math><mi>S</mi></math> gives</p>
+    <div class="mline"><math displaystyle="true"><msub><mover accent="true"><mi>h</mi><mo>&#x2DC;</mo></mover><mi>x</mi></msub><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo>=</mo><msubsup><mi>h</mi><mi>x</mi><mn>0</mn></msubsup><mo>+</mo><munder><mo>&#x2211;</mo><mrow><mi>i</mi><mo>&#x2208;</mo><mi>S</mi></mrow></munder><msub><mi>&#x3B4;</mi><mi>i</mi></msub></math></div>
+    <p>The upper layers run unchanged and give <math><mi>g</mi><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo></math>. For a pair of features the sum of single effects predicts <math><mi>g</mi><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo><mo>&#x2212;</mo><mo stretchy="false">[</mo><mi>g</mi><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo><mo>&#x2212;</mo><mi>g</mi><mo stretchy="false">(</mo><mi>N</mi><mo>&#x2216;</mo><mi>i</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo><mo>&#x2212;</mo><mo stretchy="false">[</mo><mi>g</mi><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo><mo>&#x2212;</mo><mi>g</mi><mo stretchy="false">(</mo><mi>N</mi><mo>&#x2216;</mo><mi>j</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo></math>. The colour of a cell is the model output minus this prediction.</p>
+    <p>The selected pair is SAE features 21097 and 29794 of the Llama Scope SAE. For this prompt <span data-math="sar1h"></span> = 0.1677 and <span data-math="rho2h"></span> = 0.771.</p></div>
+    <div class="src">Paper Section 3.1, Figure 9 and Table 22, prompt gendered_pronoun/00310.</div>
+  </div>
+  <aside class="notes">
+    <span class="time">~55 s</span>
+    <h4>Talk track</h4>
+    <ol class="track">
+      <li data-for="1">A prompt goes into Llama-3.1 8B. At layer 21 we take the 16 most active SAE features. We remove some of them while the rest of the activation stays fixed, and read whether the model prefers she or he as the next word.</li>
+      <li data-for="2">This is a real prompt from the paper. Each cell of the grid is one pair of the 16 features, and clicking it removes that pair. Red means removing both changes the behavior more than the two single effects added together. Teal means less. Most cells are pale, so most pairs do add up.</li>
+      <li data-for="3">This number is the prediction from single effects. We start from the full preference and subtract what each feature costs on its own.</li>
+      <li data-for="4">This is what the model does. For the selected pair the sum predicts 1.63 and the model gives 0.56. The bars show each step.</li>
+      <li data-for="5">So we need a measure of how much individual feature effects miss.</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ==================================================================
+     SLIDE 2 — SAR (toy: guess → reveal → switch model)
+     ================================================================== -->
+<section class="slide dark" data-title="SAE Additivity Residuals">
+  <div class="frame">
+    <div class="chrome"><nav class="road" aria-label="Sections"><button class="nav" data-go="2">Problem</button><button class="nav on" data-go="3">SAR</button><button class="nav" data-go="4">Coordinates</button><button class="nav" data-go="5">Pairs</button><button class="nav" data-go="6">Steering</button></nav><span class="chr-right"><button class="details-btn" data-details>Details</button></span></div>
+    <div class="sel-grid">
+      <div class="sel-left">
+        <h2 class="h2" data-editable>SAR measures what individual feature effects <em>leave unexplained</em></h2>
+        <p class="task" id="taskText" data-say="2"></p>
+        <div class="btns big" data-say="2">
+          <button class="btn primary" id="revealBtn">Reveal</button>
+          <button class="btn" id="resetBtn">Reset</button>
+        </div>
+        <div data-say="1">
+          <table class="coal hide-pred" id="coalTable" aria-label="Behavior for every subset of four toy features"></table>
+        </div>
+      </div>
+      <div class="sel-right">
+        <div data-say="4" id="modelBox" hidden>
+          <div class="seg rule-seg" id="modelSeg"><button id="modelFirst" data-m="first" aria-pressed="true">First order</button><button id="modelPair" data-m="pair" aria-pressed="false">Pairwise</button></div>
+          <p class="rule-desc" id="modelDesc"></p>
+        </div>
+        <div class="result" data-say="5">
+          <div class="mline big"><math displaystyle="true"><msub><mi mathvariant="normal">SAR</mi><mi>r</mi></msub><mo>=</mo><mfrac><mrow><mi>Var</mi><mo stretchy="false">(</mo><mi>g</mi><mo>&#x2212;</mo><msub><mi mathvariant="normal">&#x3A0;</mi><mi>r</mi></msub><mi>g</mi><mo stretchy="false">)</mo></mrow><mrow><mi>Var</mi><mo stretchy="false">(</mo><mi>g</mi><mo stretchy="false">)</mo></mrow></mfrac></math></div>
+          <div class="stat" id="sarVal">?</div>
+          <div class="vbar" id="vbar"><i class="v1"></i><i class="v2"></i><i class="v3"></i></div>
+          <div class="vleg caption">
+            <span><i class="sw" style="background:var(--gold)"></i>Explained by first order</span>
+            <span><i class="sw" style="background:#8E7A52"></i>Added by pairs</span>
+            <span><i class="sw" style="background:var(--pos-dark)"></i>Unexplained</span>
+          </div>
+          <div class="caption" id="rhoText"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer" aria-label="Details">
+    <button class="details-btn close" data-details>Close</button>
+    <div class="h3">SAE Additivity Residuals</div>
+    <div class="body">
+      <p>Subsets are drawn by keeping each feature independently with probability 1/2. Let <math><msub><mi mathvariant="normal">&#x3A0;</mi><mi>r</mi></msub><mi>g</mi></math> be the best approximation of <math><mi>g</mi></math> with terms of at most <math><mi>r</mi></math> features and <math><mi>V</mi></math> the variance of <math><mi>g</mi></math>. Then</p>
+      <div class="mline"><math displaystyle="true"><msub><mi mathvariant="normal">SAR</mi><mi>r</mi></msub><mo>=</mo><mfrac><msubsup><mrow><mo>&#x2016;</mo><mi>g</mi><mo>&#x2212;</mo><msub><mi mathvariant="normal">&#x3A0;</mi><mi>r</mi></msub><mi>g</mi><mo>&#x2016;</mo></mrow><mi>&#x3BC;</mi><mn>2</mn></msubsup><mi>V</mi></mfrac><mo>,</mo><mspace width="1em"></mspace><msub><mi>&#x394;</mi><mn>2</mn></msub><mo>=</mo><msub><mi mathvariant="normal">SAR</mi><mn>1</mn></msub><mo>&#x2212;</mo><msub><mi mathvariant="normal">SAR</mi><mn>2</mn></msub><mo>,</mo><mspace width="1em"></mspace><msub><mi>&#x3C1;</mi><mn>2</mn></msub><mo>=</mo><mfrac><msub><mi>&#x394;</mi><mn>2</mn></msub><msub><mi mathvariant="normal">SAR</mi><mn>1</mn></msub></mfrac></math></div>
+      <p>Under this sampling <math><msub><mi mathvariant="normal">SAR</mi><mi>r</mi></msub></math> is exactly the normalized energy of interactions above order <math><mi>r</mi></math>, and it bounds the coalition ordering error of the best order <math><mi>r</mi></math> approximation.</p>
+      <p>With 16 real features there are 65,536 subsets. The paper samples 384, fits on 256 and reports <math><msub><mover accent="true"><mi mathvariant="normal">SAR</mi><mo>&#x302;</mo></mover><mi>r</mi></msub><mo>=</mo><msub><mover accent="true"><mi>L</mi><mo>&#x302;</mo></mover><mi>r</mi></msub><mo>/</mo><mo stretchy="false">(</mo><mover accent="true"><mi>V</mi><mo>&#x302;</mo></mover><mo>+</mo><mi>&#x3F5;</mi><mo stretchy="false">)</mo></math> on the other 128.</p>
+      <p>The toy uses all 16 subsets of four features, so its values are exact. Its behavior is <math><mi>g</mi><mo>=</mo><mi>A</mi><mo>+</mo><mn>0.5</mn><mi>B</mi><mo>+</mo><mi>C</mi><mo>+</mo><mn>0.4</mn><mi>D</mi><mo>&#x2212;</mo><mi>A</mi><mi>C</mi><mo>+</mo><mi>A</mi><mi>B</mi><mi>D</mi></math>.</p>
+    </div>
+    <div class="src">Paper Sections 3.2 to 3.4.</div>
+  </div>
+  <aside class="notes">
+    <span class="time">~70 s</span>
+    <h4>Talk track</h4>
+    <ol class="track">
+      <li data-for="1">We use a toy with four features, A to D, and all sixteen subsets. A dot means the feature is kept, and the number is the behavior with only those features kept.</li>
+      <li data-for="2">One pair of features does not add up. Click two column headers to guess it, then press Reveal.</li>
+      <li data-for="3">After the reveal two columns appear. The first is the best prediction with one coefficient per feature. The second is its residual. The large residuals are in rows where A and C are both kept, because A and C carry the same information.</li>
+      <li data-for="4">Now switch to pairwise. The model gets one more coefficient for each pair of features, and the residuals almost vanish.</li>
+      <li data-for="5">SAR one is the share of the behavior's variance that the first order model leaves unexplained, 0.22 in this toy. SAR two is the same share for the pairwise model. Rho two is the part of SAR one that pairs recover, 88 percent here. With 16 real features we sample 384 subsets, fit on 256, and measure the residual on the other 128.</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ==================================================================
+     SLIDE 3 — COORDINATES (1,800 prompts, Figure 3 data)
+     ================================================================== -->
+<section class="slide light" data-title="Coordinates">
+  <div class="frame">
+    <div class="chrome"><nav class="road" aria-label="Sections"><button class="nav" data-go="2">Problem</button><button class="nav" data-go="3">SAR</button><button class="nav on" data-go="4">Coordinates</button><button class="nav" data-go="5">Pairs</button><button class="nav" data-go="6">Steering</button></nav><span class="chr-right"><button class="details-btn" data-details>Details</button></span></div>
+    <div class="atlas">
+      <div style="position:relative">
+        <h2 class="h2 reveal d2" data-editable>SAE coordinates have lower first order residuals than <em>random rotations</em></h2>
+        <p class="lead reveal d3" data-say="1" style="font-size:22px;margin-top:10px">A rotation mixes the 16 selected contributions into 16 new directions. The subspace, the total contribution and the upper layers stay the same.</p>
+        <div data-say="2" class="reveal d3"><svg id="rotSvg" viewBox="0 0 1150 560" role="img" aria-label="First order residual in SAE coordinates and after random rotation, 1,800 prompts"></svg>
+        <div class="caption" style="margin-top:4px">Each dot is one prompt. Each diamond is the median of one model and behavior.</div>
+        <div class="tip" id="tip"></div></div>
+      </div>
+      <div class="side">
+        <div class="blk reveal d2" data-say="4">
+          <div class="stat">18 / 18</div>
+          <div class="caption">model and behavior settings where the SAE median is lower</div>
+        </div>
+        <div class="blk reveal d3" data-say="5">
+          <div class="stat">57 / 57</div>
+          <div class="caption">settings where <span data-math="sar1h"></span> is above zero. A linear readout gives 1.55 × 10<sup>−13</sup>.</div>
+        </div>
+        <div class="blk reveal d4" data-say="3">
+          <div class="caption">Highlight a model</div>
+          <div class="chipset" id="rotChips" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer" aria-label="Details">
+    <button class="details-btn close" data-details>Close</button>
+    <div class="h3">Rotated coordinates</div>
+    <div class="body">
+      <p>With the contributions as the columns of <math><msub><mi>D</mi><mi>x</mi></msub></math>, a rotation uses <math><msub><mi>D</mi><mi>x</mi></msub><mi>Q</mi></math> where <math><mi>Q</mi></math> is orthogonal and <math><mi>Q</mi><mn>&#x1D7CF;</mn><mo>=</mo><mn>&#x1D7CF;</mn></math>. Each prompt gets eight random rotations and keeps its subsets and split.</p>
+      <p>From early to late layers <span data-math="sar1h"></span> falls in eight of nine comparisons and <span data-math="rho2h"></span> rises in all nine. Rotations show the same decrease, so part of this trend comes from the shorter downstream computation. SAE coordinates stay lower in all 33 model, behavior and layer comparisons.</p>
+    </div>
+    <table><thead><tr><th>Median, SAE/rotation</th><th>Gemma</th><th>Mistral</th><th>Llama</th></tr></thead><tbody id="rotTable"></tbody></table>
+    <div class="src">Paper Sections 4.2 and 4.5, Figure 3 and Table 10.</div>
+  </div>
+  <aside class="notes">
+    <span class="time">~55 s</span>
+    <h4>Talk track</h4>
+    <ol class="track">
+      <li data-for="1">Now real data. To see whether this depends on the SAE basis, we rotate the 16 contributions into random new directions. The subspace, the total contribution and the upper layers stay the same.</li>
+      <li data-for="2">Each dot is one of 1,800 prompts from three models and six behaviors. Up is the first order residual in SAE coordinates and right is the residual after rotation. Dots below the dashed line favor the SAE coordinates. Diamonds are medians.</li>
+      <li data-for="3">Pick a model to highlight it. Each one stays below the line.</li>
+      <li data-for="4">The SAE median is lower in all 18 settings. For Mistral subject verb agreement it is 0.022 against 0.120.</li>
+      <li data-for="5">The residual is never zero. It is positive in all 57 settings we measured, while a linear readout gives numerical zero. SAE coordinates are more compositional than rotations, but not fully additive.</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ==================================================================
+     SLIDE 4 — PAIRS (same prompt; first order, pairwise, random third order)
+     ================================================================== -->
+<section class="slide dark" data-title="Pairwise terms">
+  <div class="frame">
+    <div class="chrome"><nav class="road" aria-label="Sections"><button class="nav" data-go="2">Problem</button><button class="nav" data-go="3">SAR</button><button class="nav" data-go="4">Coordinates</button><button class="nav on" data-go="5">Pairs</button><button class="nav" data-go="6">Steering</button></nav><span class="chr-right"><button class="details-btn" data-details>Details</button></span></div>
+    <div class="acc">
+      <div class="acc-left">
+        <h2 class="h2" data-editable>Pairwise terms recover <em>most of the missing structure</em></h2>
+        <div class="eq" data-say="1">
+          <div class="mline"><math displaystyle="true"><msub><mover accent="true"><mi>a</mi><mo>&#x302;</mo></mover><mn>1</mn></msub><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>&#x3B8;</mi><mn>0</mn></msub><mo>+</mo><munder><mo>&#x2211;</mo><mrow><mi>i</mi><mo>&#x2208;</mo><mi>S</mi></mrow></munder><msub><mi>&#x3B8;</mi><mi>i</mi></msub></math></div>
+          <div class="mline"><math displaystyle="true"><msub><mover accent="true"><mi>a</mi><mo>&#x302;</mo></mover><mn>2</mn></msub><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mover accent="true"><mi>a</mi><mo>&#x302;</mo></mover><mn>1</mn></msub><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo>+</mo><munder><mo>&#x2211;</mo><mrow><mi>i</mi><mo>&lt;</mo><mi>j</mi><mo>&#x2208;</mo><mi>S</mi></mrow></munder><msub><mi>&#x3B8;</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub></math></div>
+          <div class="line small">Both are fit on 256 random subsets and evaluated on 128 held out subsets.</div>
+        </div>
+        <div class="eq" data-say="2">
+          <div class="line" style="font-style:normal">Rank fidelity</div>
+          <div class="mline"><math displaystyle="true"><msubsup><mi>F</mi><mi>rank</mi><mrow><mo stretchy="false">(</mo><mi>r</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>=</mo><msub><mi>Spearman</mi><mrow><mi>S</mi><mo>&#x2208;</mo><mi>&#x1D4B0;</mi></mrow></msub><mo stretchy="false">(</mo><msub><mover accent="true"><mi>a</mi><mo>&#x302;</mo></mover><mi>r</mi></msub><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo>,</mo><mi>g</mi><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></math></div>
+          <div class="line small">1 means every held out subset is ordered correctly.</div>
+        </div>
+        <div class="acc-stat" data-say="5">
+          <div class="stat">0.9782 → 0.9959</div>
+          <div class="caption">Average rank fidelity over 18 model and behavior settings. Pairwise terms improve it in every setting and beat the same number of random third order terms.</div>
+        </div>
+      </div>
+      <div class="acc-right">
+        <div class="caption">The same prompt, 128 held out subsets</div>
+        <div data-say="3"><svg id="fitSvg" viewBox="0 0 860 520" role="img" aria-label="Predicted versus actual behavior on held out subsets"></svg></div>
+        <div data-say="4">
+          <div class="acc-ctrl"><div class="seg" id="fitSeg"><button id="fitFirst" data-m="1" aria-pressed="true">First order</button><button id="fitPair" data-m="2" aria-pressed="false">Pairwise</button><button id="fitRand" data-m="3" aria-pressed="false">Random third order</button></div></div>
+          <div class="verdictline" id="fitVerdict"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer" aria-label="Details">
+    <button class="details-btn close" data-details>Close</button>
+    <div class="h3">Pairs and a matched control</div>
+    <div class="body">
+      <p>The pairwise model has 137 coefficients. The control keeps the 17 first order terms and replaces the 120 pair terms with 120 terms of three features drawn at random from 560. Each prompt gets 50 such controls, and this slide shows the one with the median rank fidelity. Over the 50 controls rank fidelity ranges from <span id="randRange"></span>.</p>
+      <p>Over the 18 settings pairwise terms also lower sign error in every setting and cut selection regret from 0.0272 to 0.0051. Both gains hold in all 20 repeated splits.</p>
+      <p>From the lowest to the highest <span data-math="sar1h"></span> decile, first order rank fidelity falls from 0.9857 to 0.9539 in Gemma, from 0.9939 to 0.9413 in Mistral and from 0.9790 to 0.9289 in Llama.</p>
+    </div>
+    <div class="src">Paper Sections 4.3 and 4.4, Figures 4 and 5, Tables 15 to 19 and 22.</div>
+  </div>
+  <aside class="notes">
+    <span class="time">~60 s</span>
+    <h4>Talk track</h4>
+    <ol class="track">
+      <li data-for="1">We compare two models of a subset's behavior. The first order model has one coefficient per feature. The pairwise model adds one coefficient for each pair. Both are fit on 256 random subsets and evaluated on 128 subsets they did not see.</li>
+      <li data-for="2">We judge them by rank fidelity, the Spearman correlation between predicted and actual behavior over the held out subsets.</li>
+      <li data-for="3">Back to the Emily prompt. Each dot is one held out subset. Right is the prediction and up is the model output. The red lines show the residuals.</li>
+      <li data-for="4">Click through the three models. With pairs the residuals shrink, and pairs recover 77 percent of what single features miss. The control adds 120 random third order terms instead, the same number of coefficients, and does worse.</li>
+      <li data-for="5">Over 18 settings, rank fidelity rises from 0.9782 to 0.9959 with pairs, and the gain appears in every setting.</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ==================================================================
+     SLIDE 5 — STEERING (Table 1)
+     ================================================================== -->
+<section class="slide light" data-title="Combined steering">
+  <div class="frame">
+    <div class="chrome"><nav class="road" aria-label="Sections"><button class="nav" data-go="2">Problem</button><button class="nav" data-go="3">SAR</button><button class="nav" data-go="4">Coordinates</button><button class="nav" data-go="5">Pairs</button><button class="nav on" data-go="6">Steering</button></nav><span class="chr-right"><button class="details-btn" data-details>Details</button></span></div>
+    <div class="pay">
+      <div style="position:relative">
+        <h2 class="h2" data-editable>Pairwise modeling better predicts <em>combined steering</em></h2>
+        <p class="lead" data-say="1" style="font-size:22px;margin-top:10px">We add 16 published SAE steering directions to Llama-3.1 8B in 1,024 combinations and measure accuracy on 1,400 MMLU-Pro questions.</p>
+        <div data-say="2"><svg id="steerSvg" viewBox="0 0 1040 560" role="img" aria-label="Predicted versus actual MMLU-Pro accuracy for held out steering combinations"></svg>
+        <div class="caption" style="margin-top:2px">Each dot is one of 512 held out combinations.</div></div>
+      </div>
+      <div class="pay-right">
+        <div data-say="3">
+          <div class="caption">Predict each combination with</div>
+          <div class="seg" id="steerSeg" style="margin-top:12px"><button id="steerFirst" data-m="1" aria-pressed="true">First order</button><button id="steerPair" data-m="2" aria-pressed="false">Pairwise</button></div>
+        </div>
+        <div class="bars" data-say="4">
+          <div class="mrow"><div class="ml">Rank fidelity, higher is better</div>
+            <div class="mbar" data-m="1" data-k="rank"><span class="mn">First order</span><div class="bt"><div class="bf"></div></div><span class="bv"></span></div>
+            <div class="mbar" data-m="2" data-k="rank"><span class="mn">Pairwise</span><div class="bt"><div class="bf"></div></div><span class="bv"></span></div></div>
+          <div class="mrow"><div class="ml">Ordering error, lower is better</div>
+            <div class="mline small"><math displaystyle="true"><mi>&#x2130;</mi><mo>=</mo><mfrac><mrow><mi>&#x1D53C;</mi><mo stretchy="false">[</mo><mo stretchy="false">(</mo><mi>&#x394;</mi><mi>g</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup><mspace width="0.2em"></mspace><mn>&#x1D7CF;</mn><mo stretchy="false">{</mo><mi>&#x394;</mi><mi>g</mi><mspace width="0.15em"></mspace><mi>&#x394;</mi><mi>a</mi><mo>&#x2264;</mo><mn>0</mn><mo stretchy="false">}</mo><mo stretchy="false">]</mo></mrow><mrow><mn>2</mn><mi>V</mi></mrow></mfrac></math></div>
+            <div class="mbar" data-m="1" data-k="E"><span class="mn">First order</span><div class="bt"><div class="bf"></div></div><span class="bv"></span></div>
+            <div class="mbar" data-m="2" data-k="E"><span class="mn">Pairwise</span><div class="bt"><div class="bf"></div></div><span class="bv"></span></div></div>
+          <div class="mrow"><div class="ml">Residual estimate <span data-math="sarh"></span>, lower is better</div>
+            <div class="mbar" data-m="1" data-k="sar"><span class="mn">First order</span><div class="bt"><div class="bf"></div></div><span class="bv"></span></div>
+            <div class="mbar" data-m="2" data-k="sar"><span class="mn">Pairwise</span><div class="bt"><div class="bf"></div></div><span class="bv"></span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer" aria-label="Details">
+    <button class="details-btn close" data-details>Close</button>
+    <div class="h3">The steering experiment</div>
+    <div class="body">
+      <p>The 16 MMLU-Pro features come from CorrSteer for the Llama Scope SAEs at layers 12 to 30, with their published coefficients. A combination adds each chosen direction at its layer. We sample 1,024 of the 65,536 combinations and split them 512 and 512. Each of the 14 MMLU-Pro domains contributes 100 test questions.</p>
+      <p>In ordering error, <math><mi>&#x394;</mi><mi>g</mi></math> and <math><mi>&#x394;</mi><mi>a</mi></math> are the differences in actual and predicted accuracy between two combinations. Domain results are mixed. Pairs raise rank fidelity in 10 of the 14 domains.</p>
+    </div>
+    <table><thead><tr><th>Domain</th><th>Residual, first order</th><th>Rank, first order</th><th>Rank, pairwise</th></tr></thead><tbody id="steerTable"></tbody></table>
+    <div class="src">Paper Section 4.6 and Tables 1, 7, 20 and 21.</div>
+  </div>
+  <aside class="notes">
+    <span class="time">~55 s</span>
+    <h4>Talk track</h4>
+    <ol class="track">
+      <li data-for="1">SAE features are also used for steering. We take 16 published steering features for Llama-3.1 8B and try 1,024 of the 65,536 ways to switch them on together. The outcome is accuracy on 1,400 MMLU-Pro questions.</li>
+      <li data-for="2">Each dot is a combination we did not fit on. Right is the predicted accuracy and up is the real accuracy.</li>
+      <li data-for="3">Switch between first order and pairwise. With pairs the dots move toward the diagonal.</li>
+      <li data-for="4">Rank fidelity rises from 0.5874 to 0.7790. Ordering error counts wrongly ordered pairs of combinations, weighted by their accuracy difference, and falls from 0.1444 to 0.0606. The residual estimate falls from 0.6424 to 0.3891.</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ==================================================================
+     SLIDE 6 — TAKEAWAYS
+     ================================================================== -->
+<section class="slide dark" data-title="Takeaways">
+  <div class="frame">
+    <div class="chrome"><span>Takeaways</span><span></span></div>
+    <div style="display:flex;flex-direction:column;min-height:0">
+      <h2 class="h2 reveal d2" style="max-width:1560px" data-editable>SAE coordinates are <em>comparatively compositional</em>, but faithful joint explanations still need <em>interactions</em></h2>
+      <div class="take reveal d3" data-say="1">
+        <div><div class="h3">Individual effects leave a residual</div><div class="body"><span data-math="sar1h"></span> is above zero in all 57 settings.</div></div>
+        <div><div class="h3">SAE coordinates add up better</div><div class="body">They beat random rotations of the same subspace in all 18 settings.</div></div>
+        <div><div class="h3">Pairs recover most of the rest</div><div class="body">Rank fidelity rises from 0.9782 to 0.9959, and from 0.5874 to 0.7790 for steering.</div></div>
+      </div>
+      <div class="notclaim reveal d4" data-say="2">
+        <div><div class="caption">What these results do not show</div>
+          <ul class="dash"><li>A property of a whole SAE dictionary. The results depend on the selected features, the behavior and the intervention.</li><li>That pairs are always enough. Some higher order structure remains, and pairs did not help in every steering domain.</li><li>What the interacting features mean.</li></ul></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <span class="time">~30 s</span>
+    <h4>Talk track</h4>
+    <ol class="track">
+      <li data-for="1">Three points. Individual feature effects leave a residual everywhere we looked. SAE coordinates add up better than random rotations of the same subspace. Pairs recover most of what is missing, for explanations and for steering.</li>
+      <li data-for="2">These results depend on the selected features, the behavior and the intervention, so they are not a property of a whole SAE dictionary. Pairs do not remove all interaction, and we do not interpret what the features mean.</li>
+    </ol>
+  </aside>
+</section>
+
+</main>
+</div>
+
+<div id="notesPanel" aria-live="polite"></div>
+<div id="helpPanel" role="dialog" aria-label="Keyboard help"><div class="card">
+  <div><kbd>← →</kbd> previous or next slide, also space, wheel and swipe</div>
+  <div><kbd>Home End</kbd> first or last slide</div>
+  <div><kbd>D</kbd> details for this slide</div>
+  <div><kbd>N</kbd> talk track with numbered marks</div>
+  
+  <div><kbd>?</kbd> this help · <kbd>Esc</kbd> close panels</div>
+</div></div>
+
+<nav class="deck-controls" aria-label="Slide navigation">
+  <button id="prevBtn" aria-label="Previous slide">‹</button>
+  <span id="counter">01 / 07</span>
+  <button id="nextBtn" aria-label="Next slide">›</button>
+  <button id="notesBtn" aria-label="Talk track">N</button>
+  <button id="helpBtn" aria-label="Keyboard help">?</button>
+</nav>
+
+<script>
+/* ===========================================
+   DATA — built by build/build_data.py (authority sources, parity-checked)
+   =========================================== */
+const DATA = {"case":{"text":"After Emily went to the store,","features":[18562,15879,30871,8614,21470,26847,18567,13107,14621,11681,7386,21097,29794,2896,21203,10237],"g_full":4.3125,"singles":[4.5,4.3125,4.3125,3.875,3.75,4.125,4.5,4.4375,4.4375,4.3125,5.0625,2.625,3.3125,4.6875,4.3125,4.4375],"pairs":{"0-1":4.3125,"0-2":4.4375,"0-3":4.125,"0-4":3.875,"0-5":4.3125,"0-6":4.5625,"0-7":4.5625,"0-8":4.625,"0-9":4.4375,"0-10":5.25,"0-11":2.75,"0-12":3.8125,"0-13":4.8125,"0-14":4.4375,"0-15":4.5625,"1-2":4.1875,"1-3":3.8125,"1-4":3.625,"1-5":4.0625,"1-6":4.375,"1-7":4.25,"1-8":4.375,"1-9":4.3125,"1-10":5.0,"1-11":2.375,"1-12":3.3125,"1-13":4.625,"1-14":4.25,"1-15":4.4375,"2-3":3.8125,"2-4":3.625,"2-5":4.0625,"2-6":4.4375,"2-7":4.375,"2-8":4.375,"2-9":4.3125,"2-10":4.9375,"2-11":2.5625,"2-12":3.25,"2-13":4.625,"2-14":4.25,"2-15":4.375,"3-4":3.3125,"3-5":3.5625,"3-6":4.0,"3-7":3.9375,"3-8":4.0,"3-9":3.875,"3-10":4.5625,"3-11":2.3125,"3-12":3.0625,"3-13":4.25,"3-14":3.8125,"3-15":4.0,"4-5":3.5,"4-6":3.875,"4-7":3.75,"4-8":3.875,"4-9":3.6875,"4-10":4.4375,"4-11":2.375,"4-12":2.6875,"4-13":4.0,"4-14":3.6875,"4-15":3.8125,"5-6":4.3125,"5-7":4.1875,"5-8":4.25,"5-9":4.125,"5-10":4.875,"5-11":2.5,"5-12":3.1875,"5-13":4.5,"5-14":4.0625,"5-15":4.25,"6-7":4.5,"6-8":4.625,"6-9":4.4375,"6-10":5.1875,"6-11":2.6875,"6-12":3.4375,"6-13":4.8125,"6-14":4.5,"6-15":4.5625,"7-8":4.5,"7-9":4.375,"7-10":5.0625,"7-11":2.5625,"7-12":3.3125,"7-13":4.625,"7-14":4.3125,"7-15":4.4375,"8-9":4.4375,"8-10":5.1875,"8-11":2.6875,"8-12":3.375,"8-13":4.75,"8-14":4.4375,"8-15":4.5625,"9-10":5.0,"9-11":2.625,"9-12":3.3125,"9-13":4.625,"9-14":4.3125,"9-15":4.375,"10-11":3.125,"10-12":3.9375,"10-13":5.5,"10-14":5.0,"10-15":5.1875,"11-12":0.5625,"11-13":2.875,"11-14":2.6875,"11-15":2.6875,"12-13":3.5625,"12-14":3.1875,"12-15":3.375,"13-14":4.625,"13-15":4.75,"14-15":4.4375},"pair":[11,12],"held":[[3.1875,2.2825,3.0741,2.5908],[0.625,0.9885,0.3714,0.4221],[0.25,0.6529,-0.2746,1.294],[4.0,4.2845,3.9227,4.4844],[4.8125,4.8119,4.6877,5.1687],[3.0,2.6666,2.7588,2.0283],[3.3125,2.9373,2.7942,2.7976],[0.0,0.3821,-0.405,0.1605],[0.0625,0.3414,-0.4247,1.1363],[3.125,2.8572,3.3919,3.0299],[4.875,3.8053,4.6737,3.6852],[2.5,2.5075,2.3894,1.7107],[2.9375,2.4613,3.0149,2.5294],[-0.4375,1.2432,0.1196,0.6139],[4.0625,3.2729,3.7521,3.1864],[3.0625,2.2682,3.1554,3.3547],[0.3125,1.7312,0.5833,1.7468],[2.8125,2.5109,2.5633,2.9245],[2.9375,3.2068,3.0766,4.559],[4.875,5.2375,4.8982,5.3716],[2.1875,1.8098,2.1577,2.033],[2.9375,2.359,2.8037,2.8736],[0.125,-0.0587,-0.1944,0.233],[-0.125,0.3669,-0.2787,0.3258],[3.75,3.4006,3.8727,3.7413],[2.6875,2.5815,2.7679,2.1117],[0.0,0.0686,0.4495,0.9102],[4.875,5.4435,6.0837,6.1206],[5.4375,3.7267,4.5336,3.3432],[2.3125,2.0867,2.447,2.2717],[3.5,3.4423,3.4,3.4101],[3.1875,2.9713,3.3508,2.0205],[4.3125,4.5663,4.003,2.7063],[4.3125,4.7447,4.0337,4.7481],[4.125,4.6364,4.0444,5.3579],[2.25,1.3006,2.2664,2.1817],[2.8125,2.3307,2.8232,2.741],[3.1875,2.5953,2.6994,2.0105],[3.75,3.1464,3.8918,2.5709],[0.3125,0.1544,0.2244,-0.1386],[0.125,0.203,-0.2395,0.5325],[2.4375,2.0808,1.8898,1.2904],[5.25,5.6847,5.353,5.9095],[0.5,0.8595,0.0932,0.6569],[-0.0625,1.6392,0.2424,1.5721],[2.1875,1.3172,2.1506,1.5635],[0.625,1.2823,0.954,1.097],[4.0625,4.2221,4.1197,3.6534],[3.5625,4.2877,3.4066,3.7897],[2.75,2.2527,2.8685,2.4799],[0.3125,1.0091,0.4953,0.9912],[0.9375,1.1703,0.3905,0.9737],[3.625,3.3452,3.813,2.5989],[0.5,0.9565,-0.1488,1.9702],[3.1875,3.1565,3.2503,3.2966],[4.125,3.896,4.0767,3.5199],[4.125,4.5043,4.5285,4.7458],[4.0625,3.0012,3.4664,2.3422],[3.25,2.554,3.3478,2.0914],[3.625,3.8886,3.1733,4.4274],[2.9375,2.3539,3.3491,2.6862],[0.1875,1.5894,0.811,1.3948],[-0.1875,0.752,-0.5418,-0.2525],[-0.25,1.3951,0.2769,0.5682],[2.5625,1.9801,2.0002,1.0126],[3.5,2.7963,3.4512,3.7049],[3.25,2.8031,3.2454,2.0923],[4.125,3.4273,3.9751,2.9179],[3.0,2.4486,3.3774,1.9292],[2.9375,3.819,2.8326,3.7979],[0.375,0.7416,-0.0846,0.1679],[3.75,3.0707,3.9105,2.5813],[0.75,1.1403,0.6493,1.439],[0.125,0.4378,0.0366,1.2498],[0.375,1.1423,0.5298,0.4802],[2.8125,2.0818,3.1598,1.7257],[0.25,0.9894,-0.0122,1.3156],[4.5,3.7105,4.4927,2.6889],[-0.4375,0.3327,-0.1738,0.543],[5.0625,5.0789,4.7738,5.9566],[2.0625,1.6349,1.7477,2.36],[0.125,0.2796,0.0664,0.0049],[0.125,1.4624,0.3705,-0.2069],[2.5625,2.0949,2.5059,2.5923],[2.3125,1.485,1.9926,0.072],[-0.5,0.0622,-0.6708,-0.816],[4.3125,4.7933,3.8746,6.0728],[2.9375,4.5435,3.8143,4.797],[3.9375,4.156,3.8099,3.2731],[2.0,1.0843,2.7546,1.6511],[3.1875,4.2707,3.309,4.712],[0.1875,0.6657,0.2084,0.2787],[3.8125,3.8367,3.965,4.7238],[3.3125,2.5962,3.1646,2.7495],[2.625,1.9235,2.488,2.0869],[4.375,4.6478,4.5092,4.0076],[-0.8125,-0.2702,-0.7429,-0.4641],[4.375,3.7552,4.6193,4.1589],[2.3125,1.8814,1.7739,1.7045],[3.625,4.3364,3.3495,4.5733],[4.0,3.0155,3.615,2.7476],[4.25,3.4016,4.1749,2.4476],[2.8125,2.5103,2.8374,2.444],[3.6875,3.0489,3.6773,2.8465],[2.375,2.2347,2.7359,3.025],[3.5625,3.3887,3.5189,3.6277],[-0.1875,1.394,-0.1242,1.2584],[5.125,5.5781,5.6167,5.5495],[3.625,4.2737,3.3297,4.5293],[-0.9375,-0.1071,-0.7944,-1.0813],[3.1875,3.0423,3.2293,1.9671],[-0.3125,1.4645,0.2571,1.9824],[2.75,2.1134,2.9016,2.4056],[1.0625,1.6413,1.1754,1.304],[3.625,4.4791,3.3971,4.2483],[3.3125,3.0038,3.4412,2.8388],[4.375,4.6562,3.9903,5.2686],[2.0,1.5141,2.3061,2.0265],[3.625,3.4582,4.0738,2.4856],[0.6875,1.3938,0.5298,1.1384],[2.875,3.6278,2.5931,3.6326],[0.1875,-0.2105,0.5032,0.1017],[4.5,4.7176,4.0948,4.1348],[4.125,4.6234,3.7574,4.9403],[4.5,5.0396,4.5027,4.207],[3.0,2.8401,3.0785,3.3436],[3.0625,2.6789,2.9488,2.8722],[3.25,3.5325,3.1102,3.8211]],"metrics":{"sar1":0.1677,"sar2":0.0384,"rho2":0.771,"rank1":0.933,"rank2":0.971,"rank3":0.861,"rank3_range":[0.805,0.908]}},"rotation":{"points":[[0,0,0.0598,0.13457],[0,0,0.04133,0.08572],[0,0,0.03493,0.06972],[0,0,0.07362,0.133],[0,0,0.02155,0.05712],[0,0,0.01876,0.03943],[0,0,0.03935,0.05838],[0,0,0.03277,0.07824],[0,0,0.02609,0.07971],[0,0,0.04337,0.06571],[0,0,0.08237,0.12715],[0,0,0.08805,0.11318],[0,0,0.04786,0.12024],[0,0,0.02216,0.1109],[0,0,0.04853,0.0743],[0,0,0.12109,0.12824],[0,0,0.03792,0.08434],[0,0,0.05835,0.09631],[0,0,0.08702,0.17304],[0,0,0.04774,0.05367],[0,0,0.13681,0.2451],[0,0,0.02903,0.04976],[0,0,0.044,0.07389],[0,0,0.03274,0.03977],[0,0,0.04854,0.04768],[0,0,0.03942,0.06866],[0,0,0.03662,0.0415],[0,0,0.05528,0.20601],[0,0,0.10453,0.141],[0,0,0.06356,0.11172],[0,0,0.03414,0.05625],[0,0,0.01759,0.08012],[0,0,0.0295,0.08658],[0,0,0.0324,0.06199],[0,0,0.04777,0.09047],[0,0,0.05012,0.19057],[0,0,0.0412,0.06001],[0,0,0.02512,0.19562],[0,0,0.03909,0.04644],[0,0,0.0566,0.07691],[0,0,0.07526,0.18877],[0,0,0.03724,0.11826],[0,0,0.07079,0.15576],[0,0,0.0136,0.02328],[0,0,0.03234,0.05978],[0,0,0.08298,0.12937],[0,0,0.01934,0.0397],[0,0,0.06369,0.10195],[0,0,0.03373,0.05981],[0,0,0.08515,0.10087],[0,0,0.02844,0.1418],[0,0,0.04549,0.06968],[0,0,0.03624,0.06634],[0,0,0.01882,0.03604],[0,0,0.12685,0.18228],[0,0,0.06181,0.08336],[0,0,0.04392,0.05942],[0,0,0.03905,0.11897],[0,0,0.03216,0.05013],[0,0,0.02606,0.15205],[0,0,0.03777,0.07271],[0,0,0.06652,0.22896],[0,0,0.0193,0.03397],[0,0,0.03267,0.04066],[0,0,0.08949,0.20444],[0,0,0.04209,0.06143],[0,0,0.02039,0.12016],[0,0,0.03655,0.06238],[0,0,0.05103,0.16329],[0,0,0.02737,0.06011],[0,0,0.10218,0.13459],[0,0,0.07908,0.08245],[0,0,0.06361,0.1099],[0,0,0.04991,0.06621],[0,0,0.05941,0.08329],[0,0,0.06035,0.19319],[0,0,0.04072,0.06832],[0,0,0.03642,0.05518],[0,0,0.06354,0.28654],[0,0,0.03924,0.11615],[0,0,0.03007,0.03591],[0,0,0.04056,0.05818],[0,0,0.03258,0.15278],[0,0,0.0341,0.03309],[0,0,0.02225,0.0387],[0,0,0.02293,0.02986],[0,0,0.03187,0.18785],[0,0,0.08188,0.15871],[0,0,0.02418,0.1564],[0,0,0.04603,0.1305],[0,0,0.03171,0.0636],[0,0,0.08222,0.14329],[0,0,0.04847,0.05627],[0,0,0.04112,0.10006],[0,0,0.04996,0.09978],[0,0,0.02298,0.0394],[0,0,0.10779,0.16971],[0,0,0.01858,0.02812],[0,0,0.06637,0.08806],[0,0,0.04083,0.18082],[0,1,0.08148,0.14054],[0,1,0.04035,0.06256],[0,1,0.03113,0.06634],[0,1,0.04055,0.0835],[0,1,0.0259,0.07663],[0,1,0.02234,0.04185],[0,1,0.05852,0.11036],[0,1,0.03153,0.05851],[0,1,0.04793,0.1019],[0,1,0.02188,0.05992],[0,1,0.02616,0.06684],[0,1,0.03321,0.06853],[0,1,0.01478,0.02369],[0,1,0.02924,0.11157],[0,1,0.02562,0.04331],[0,1,0.02451,0.05311],[0,1,0.03077,0.09764],[0,1,0.03339,0.08762],[0,1,0.01331,0.02582],[0,1,0.03844,0.05675],[0,1,0.03753,0.04109],[0,1,0.14125,0.12287],[0,1,0.04264,0.10474],[0,1,0.10279,0.15698],[0,1,0.04841,0.0664],[0,1,0.03524,0.0713],[0,1,0.06085,0.08503],[0,1,0.02321,0.06701],[0,1,0.01173,0.03358],[0,1,0.04872,0.0996],[0,1,0.00799,0.03933],[0,1,0.05389,0.09923],[0,1,0.02345,0.08408],[0,1,0.03304,0.10946],[0,1,0.01113,0.04559],[0,1,0.04803,0.14157],[0,1,0.01576,0.04386],[0,1,0.02433,0.03347],[0,1,0.06135,0.09144],[0,1,0.05846,0.11015],[0,1,0.05322,0.12108],[0,1,0.02105,0.03037],[0,1,0.03195,0.11831],[0,1,0.08516,0.13116],[0,1,0.04881,0.09391],[0,1,0.04186,0.06448],[0,1,0.01547,0.06112],[0,1,0.01684,0.04038],[0,1,0.05238,0.09202],[0,1,0.01818,0.03477],[0,1,0.05348,0.10576],[0,1,0.03977,0.08304],[0,1,0.01586,0.03517],[0,1,0.05115,0.10153],[0,1,0.09575,0.14184],[0,1,0.01207,0.0398],[0,1,0.01855,0.04457],[0,1,0.03572,0.06522],[0,1,0.03742,0.0788],[0,1,0.12264,0.17056],[0,1,0.03226,0.06304],[0,1,0.03975,0.08893],[0,1,0.0773,0.13417],[0,1,0.01067,0.02712],[0,1,0.04198,0.0858],[0,1,0.02929,0.04768],[0,1,0.02951,0.04736],[0,1,0.03496,0.09788],[0,1,0.00953,0.08774],[0,1,0.07282,0.14528],[0,1,0.05644,0.0929],[0,1,0.0112,0.04695],[0,1,0.03779,0.06619],[0,1,0.03355,0.07265],[0,1,0.06406,0.09205],[0,1,0.02824,0.08372],[0,1,0.08367,0.14173],[0,1,0.03523,0.07805],[0,1,0.03395,0.07971],[0,1,0.02552,0.05328],[0,1,0.08766,0.15328],[0,1,0.03326,0.06394],[0,1,0.02866,0.06542],[0,1,0.01123,0.0241],[0,1,0.06369,0.15843],[0,1,0.01432,0.04741],[0,1,0.08328,0.13324],[0,1,0.01646,0.05986],[0,1,0.03055,0.08856],[0,1,0.03545,0.0797],[0,1,0.03213,0.05296],[0,1,0.04724,0.07441],[0,1,0.02059,0.06831],[0,1,0.01795,0.07613],[0,1,0.02043,0.03261],[0,1,0.08349,0.11761],[0,1,0.06767,0.08914],[0,1,0.0202,0.06997],[0,1,0.02693,0.0887],[0,1,0.01554,0.03353],[0,2,0.04806,0.05936],[0,2,0.02832,0.05519],[0,2,0.03106,0.08099],[0,2,0.02379,0.07143],[0,2,0.02613,0.08596],[0,2,0.02656,0.07923],[0,2,0.03696,0.07823],[0,2,0.0384,0.10401],[0,2,0.04525,0.08816],[0,2,0.02455,0.05267],[0,2,0.03423,0.06312],[0,2,0.03499,0.05343],[0,2,0.04884,0.06072],[0,2,0.02625,0.05801],[0,2,0.02614,0.09038],[0,2,0.05665,0.06884],[0,2,0.02384,0.08815],[0,2,0.04394,0.08776],[0,2,0.02814,0.06894],[0,2,0.04301,0.10166],[0,2,0.02725,0.08196],[0,2,0.04936,0.0794],[0,2,0.03708,0.06824],[0,2,0.03479,0.08275],[0,2,0.02264,0.08117],[0,2,0.02198,0.06369],[0,2,0.03797,0.09523],[0,2,0.03184,0.07368],[0,2,0.04142,0.09316],[0,2,0.04758,0.05974],[0,2,0.02452,0.04868],[0,2,0.0244,0.08871],[0,2,0.02377,0.05916],[0,2,0.0498,0.09503],[0,2,0.05548,0.07359],[0,2,0.02473,0.0608],[0,2,0.04937,0.09857],[0,2,0.03537,0.09622],[0,2,0.05109,0.09552],[0,2,0.03981,0.08455],[0,2,0.03765,0.09891],[0,2,0.02348,0.06719],[0,2,0.03359,0.0527],[0,2,0.03336,0.0616],[0,2,0.02339,0.06037],[0,2,0.04374,0.08314],[0,2,0.03207,0.05556],[0,2,0.03805,0.06485],[0,2,0.04056,0.05784],[0,2,0.02325,0.07564],[0,2,0.06803,0.09217],[0,2,0.04556,0.0911],[0,2,0.03335,0.06811],[0,2,0.02619,0.08005],[0,2,0.03634,0.05891],[0,2,0.05402,0.09905],[0,2,0.03104,0.06974],[0,2,0.02909,0.06112],[0,2,0.0206,0.06339],[0,2,0.03944,0.09314],[0,2,0.02871,0.05617],[0,2,0.06324,0.0724],[0,2,0.03905,0.09159],[0,2,0.04837,0.08365],[0,2,0.05144,0.09034],[0,2,0.06011,0.09451],[0,2,0.01971,0.08074],[0,2,0.0451,0.07412],[0,2,0.02737,0.07539],[0,2,0.042,0.06733],[0,2,0.03719,0.06817],[0,2,0.03166,0.09189],[0,2,0.03376,0.04069],[0,2,0.03558,0.08701],[0,2,0.05162,0.06731],[0,2,0.03754,0.09113],[0,2,0.03556,0.0958],[0,2,0.0571,0.08607],[0,2,0.06521,0.11473],[0,2,0.07632,0.11047],[0,2,0.06501,0.13432],[0,2,0.05649,0.09216],[0,2,0.04275,0.09223],[0,2,0.05685,0.0686],[0,2,0.05665,0.0781],[0,2,0.03072,0.08219],[0,2,0.05427,0.08602],[0,2,0.04181,0.10401],[0,2,0.06608,0.11714],[0,2,0.04183,0.08277],[0,2,0.04181,0.06773],[0,2,0.0658,0.08134],[0,2,0.04019,0.133],[0,2,0.043,0.06463],[0,2,0.04886,0.08851],[0,2,0.04443,0.10463],[0,2,0.06083,0.06928],[0,2,0.05465,0.07894],[0,2,0.07504,0.19911],[0,2,0.05365,0.08085],[0,3,0.04132,0.07211],[0,3,0.03492,0.03424],[0,3,0.05214,0.09801],[0,3,0.05464,0.13864],[0,3,0.03086,0.0377],[0,3,0.05316,0.07263],[0,3,0.03062,0.0489],[0,3,0.10195,0.1248],[0,3,0.05906,0.10937],[0,3,0.06301,0.14479],[0,3,0.0224,0.13763],[0,3,0.02192,0.1672],[0,3,0.0909,0.0839],[0,3,0.05782,0.06901],[0,3,0.08289,0.14283],[0,3,0.04076,0.11184],[0,3,0.05252,0.0941],[0,3,0.0485,0.11436],[0,3,0.07024,0.07664],[0,3,0.07174,0.06441],[0,3,0.07444,0.1191],[0,3,0.07845,0.09083],[0,3,0.09296,0.17624],[0,3,0.08336,0.13097],[0,3,0.06094,0.09089],[0,3,0.07722,0.07572],[0,3,0.05279,0.07025],[0,3,0.13758,0.26323],[0,3,0.03245,0.04692],[0,3,0.06804,0.09106],[0,3,0.08532,0.22159],[0,3,0.06805,0.11332],[0,3,0.06893,0.10237],[0,3,0.03973,0.06042],[0,3,0.044,0.04829],[0,3,0.03963,0.03543],[0,3,0.03414,0.04237],[0,3,0.03687,0.05892],[0,3,0.02515,0.03166],[0,3,0.03718,0.05299],[0,3,0.05052,0.11344],[0,3,0.08952,0.08162],[0,3,0.03942,0.14148],[0,3,0.05815,0.07271],[0,3,0.06915,0.09952],[0,3,0.02974,0.03499],[0,3,0.02404,0.05023],[0,3,0.0968,0.24232],[0,3,0.06801,0.20055],[0,3,0.03196,0.09453],[0,3,0.07969,0.10088],[0,3,0.04752,0.08843],[0,3,0.11548,0.18186],[0,3,0.11069,0.22949],[0,3,0.03308,0.14002],[0,3,0.06521,0.11689],[0,3,0.04951,0.06875],[0,3,0.03799,0.05144],[0,3,0.04265,0.04328],[0,3,0.07345,0.11518],[0,3,0.06004,0.21847],[0,3,0.07511,0.1693],[0,3,0.08736,0.09875],[0,3,0.02343,0.14598],[0,3,0.02447,0.12629],[0,3,0.03524,0.03294],[0,3,0.03975,0.05869],[0,3,0.0869,0.12819],[0,3,0.05548,0.09446],[0,3,0.0847,0.10751],[0,3,0.05219,0.07391],[0,3,0.05217,0.06863],[0,3,0.04514,0.04754],[0,3,0.05649,0.07897],[0,3,0.03875,0.04322],[0,3,0.05704,0.0808],[0,3,0.02688,0.05296],[0,3,0.11792,0.14018],[0,3,0.0603,0.09997],[0,3,0.07336,0.06742],[0,3,0.03514,0.03559],[0,3,0.06214,0.08757],[0,3,0.08349,0.11648],[0,3,0.09643,0.10955],[0,3,0.0323,0.03988],[0,3,0.05619,0.07533],[0,3,0.04558,0.05817],[0,3,0.09448,0.1139],[0,3,0.03377,0.1373],[0,3,0.05569,0.07478],[0,3,0.05238,0.11125],[0,3,0.03436,0.03761],[0,3,0.09018,0.09645],[0,3,0.08303,0.12849],[0,3,0.04063,0.0854],[0,3,0.1022,0.14409],[0,3,0.059,0.11518],[0,3,0.0422,0.19564],[0,3,0.06737,0.07243],[0,3,0.04095,0.20585],[0,4,0.01433,0.0165],[0,4,0.02127,0.01735],[0,4,0.02349,0.02947],[0,4,0.01504,0.01896],[0,4,0.01906,0.02062],[0,4,0.02113,0.02607],[0,4,0.02484,0.02623],[0,4,0.04431,0.04965],[0,4,0.03898,0.03312],[0,4,0.03409,0.02968],[0,4,0.03167,0.0279],[0,4,0.01996,0.02431],[0,4,0.02561,0.01984],[0,4,0.0109,0.01414],[0,4,0.01355,0.02242],[0,4,0.02597,0.02436],[0,4,0.02131,0.01887],[0,4,0.02254,0.02648],[0,4,0.03584,0.0367],[0,4,0.02587,0.02183],[0,4,0.04921,0.04622],[0,4,0.02001,0.01927],[0,4,0.0222,0.02347],[0,4,0.02339,0.01911],[0,4,0.01737,0.02183],[0,4,0.02294,0.02205],[0,4,0.02118,0.02476],[0,4,0.01335,0.01794],[0,4,0.03416,0.03131],[0,4,0.02327,0.02933],[0,4,0.0207,0.02965],[0,4,0.02859,0.02778],[0,4,0.01248,0.01624],[0,4,0.0154,0.01859],[0,4,0.0253,0.02988],[0,4,0.02184,0.02977],[0,4,0.03005,0.02818],[0,4,0.01588,0.01646],[0,4,0.02286,0.02162],[0,4,0.01708,0.02386],[0,4,0.03259,0.03746],[0,4,0.02715,0.02371],[0,4,0.03851,0.04256],[0,4,0.02081,0.01699],[0,4,0.02855,0.02462],[0,4,0.00898,0.0143],[0,4,0.02051,0.01974],[0,4,0.02871,0.0298],[0,4,0.04161,0.05711],[0,4,0.01682,0.02013],[0,4,0.02641,0.02153],[0,4,0.01611,0.02557],[0,4,0.0201,0.02557],[0,4,0.0429,0.03294],[0,4,0.01344,0.01484],[0,4,0.02277,0.02251],[0,4,0.02062,0.02113],[0,4,0.01073,0.01439],[0,4,0.01443,0.02052],[0,4,0.03373,0.03069],[0,4,0.02491,0.03291],[0,4,0.03799,0.05463],[0,4,0.02042,0.02525],[0,4,0.0672,0.07926],[0,4,0.02134,0.03043],[0,4,0.01431,0.0128],[0,4,0.01758,0.01927],[0,4,0.01686,0.01845],[0,4,0.04692,0.05811],[0,4,0.03995,0.03897],[0,4,0.0224,0.02346],[0,4,0.01754,0.02238],[0,4,0.01493,0.01493],[0,4,0.01555,0.01399],[0,4,0.02552,0.02417],[0,4,0.02169,0.01939],[0,4,0.03106,0.02797],[0,4,0.0151,0.01511],[0,4,0.01942,0.0212],[0,4,0.01661,0.0182],[0,4,0.05222,0.04604],[0,4,0.01911,0.02446],[0,4,0.06152,0.09681],[0,4,0.01876,0.01887],[0,4,0.03967,0.03182],[0,4,0.01914,0.02497],[0,4,0.02681,0.03221],[0,4,0.02431,0.02498],[0,4,0.01945,0.02337],[0,4,0.01394,0.01614],[0,4,0.04222,0.07111],[0,4,0.01012,0.01231],[0,4,0.01331,0.01452],[0,4,0.0212,0.02229],[0,4,0.0292,0.03794],[0,4,0.01877,0.01445],[0,4,0.01856,0.02429],[0,4,0.02012,0.02828],[0,4,0.02026,0.02208],[0,4,0.02986,0.02555],[0,5,0.02793,0.03178],[0,5,0.02838,0.03051],[0,5,0.02452,0.03906],[0,5,0.01954,0.03345],[0,5,0.02015,0.02898],[0,5,0.01917,0.04584],[0,5,0.01953,0.03097],[0,5,0.02284,0.0439],[0,5,0.02662,0.03341],[0,5,0.01915,0.03127],[0,5,0.01848,0.02911],[0,5,0.02609,0.03768],[0,5,0.02555,0.03439],[0,5,0.0209,0.03032],[0,5,0.02463,0.03325],[0,5,0.02646,0.02983],[0,5,0.01992,0.0307],[0,5,0.01888,0.03013],[0,5,0.02958,0.03182],[0,5,0.02271,0.02425],[0,5,0.01938,0.02833],[0,5,0.02319,0.03434],[0,5,0.02162,0.04667],[0,5,0.02443,0.02996],[0,5,0.01934,0.02764],[0,5,0.01862,0.03569],[0,5,0.02107,0.02893],[0,5,0.02236,0.02597],[0,5,0.01712,0.03851],[0,5,0.02003,0.03891],[0,5,0.01893,0.03619],[0,5,0.02462,0.02935],[0,5,0.0212,0.03492],[0,5,0.01946,0.02902],[0,5,0.0194,0.03084],[0,5,0.02236,0.03002],[0,5,0.02431,0.02863],[0,5,0.02756,0.03019],[0,5,0.02796,0.03403],[0,5,0.02314,0.04341],[0,5,0.0206,0.03214],[0,5,0.01937,0.03679],[0,5,0.02167,0.02679],[0,5,0.01693,0.03835],[0,5,0.02498,0.03065],[0,5,0.01979,0.03],[0,5,0.02739,0.03605],[0,5,0.02772,0.05212],[0,5,0.01788,0.03625],[0,5,0.0203,0.02807],[0,5,0.0166,0.03346],[0,5,0.02271,0.02918],[0,5,0.03438,0.03223],[0,5,0.02188,0.02726],[0,5,0.02266,0.02662],[0,5,0.01952,0.03566],[0,5,0.01991,0.03516],[0,5,0.02632,0.02789],[0,5,0.02167,0.03946],[0,5,0.02214,0.03621],[0,5,0.02191,0.02909],[0,5,0.01633,0.03936],[0,5,0.01786,0.03442],[0,5,0.02216,0.03772],[0,5,0.02023,0.04171],[0,5,0.01567,0.02548],[0,5,0.02359,0.03181],[0,5,0.01791,0.02795],[0,5,0.02508,0.04022],[0,5,0.02152,0.02936],[0,5,0.0247,0.03007],[0,5,0.01727,0.03614],[0,5,0.02323,0.03408],[0,5,0.02365,0.03053],[0,5,0.02027,0.03502],[0,5,0.02078,0.02877],[0,5,0.01785,0.02575],[0,5,0.02441,0.03074],[0,5,0.02488,0.04098],[0,5,0.0229,0.03283],[0,5,0.0225,0.02838],[0,5,0.01764,0.024],[0,5,0.02239,0.04155],[0,5,0.02236,0.04069],[0,5,0.02322,0.0401],[0,5,0.02472,0.02994],[0,5,0.01783,0.03271],[0,5,0.02414,0.03282],[0,5,0.01937,0.02622],[0,5,0.01925,0.03763],[0,5,0.01879,0.03255],[0,5,0.01527,0.03356],[0,5,0.02193,0.03727],[0,5,0.02322,0.03046],[0,5,0.02874,0.02677],[0,5,0.01431,0.02458],[0,5,0.0193,0.03136],[0,5,0.01908,0.03669],[0,5,0.02103,0.02752],[0,5,0.02088,0.03832],[1,0,0.01571,0.10473],[1,0,0.0245,0.07512],[1,0,0.02643,0.10935],[1,0,0.02226,0.09828],[1,0,0.03265,0.07405],[1,0,0.01411,0.07516],[1,0,0.01367,0.03796],[1,0,0.01211,0.05585],[1,0,0.01764,0.08694],[1,0,0.01917,0.03449],[1,0,0.06923,0.06136],[1,0,0.01449,0.03682],[1,0,0.02942,0.0445],[1,0,0.03658,0.05453],[1,0,0.01114,0.08876],[1,0,0.02706,0.04911],[1,0,0.02123,0.09283],[1,0,0.01376,0.04665],[1,0,0.03929,0.0837],[1,0,0.02937,0.04133],[1,0,0.02649,0.03293],[1,0,0.01957,0.03181],[1,0,0.01876,0.0515],[1,0,0.0909,0.05289],[1,0,0.01615,0.03673],[1,0,0.05191,0.10418],[1,0,0.01148,0.05732],[1,0,0.02022,0.04799],[1,0,0.01362,0.05417],[1,0,0.03277,0.06412],[1,0,0.05207,0.06285],[1,0,0.01886,0.03895],[1,0,0.01054,0.02448],[1,0,0.02386,0.08333],[1,0,0.04532,0.08369],[1,0,0.03698,0.03753],[1,0,0.02677,0.05306],[1,0,0.01495,0.03426],[1,0,0.06227,0.1268],[1,0,0.01136,0.02772],[1,0,0.0231,0.03613],[1,0,0.03887,0.11295],[1,0,0.01884,0.03061],[1,0,0.01612,0.04115],[1,0,0.03717,0.09606],[1,0,0.04803,0.08264],[1,0,0.01212,0.0729],[1,0,0.03638,0.06826],[1,0,0.02275,0.04342],[1,0,0.0094,0.04857],[1,0,0.01077,0.03691],[1,0,0.04519,0.05906],[1,0,0.02256,0.07182],[1,0,0.01997,0.05988],[1,0,0.02516,0.06627],[1,0,0.01374,0.04519],[1,0,0.04399,0.1599],[1,0,0.01889,0.07585],[1,0,0.00452,0.02421],[1,0,0.0065,0.02815],[1,0,0.04773,0.0622],[1,0,0.01968,0.04499],[1,0,0.01986,0.05815],[1,0,0.04481,0.15346],[1,0,0.01059,0.03089],[1,0,0.0342,0.05774],[1,0,0.02836,0.08647],[1,0,0.04106,0.05389],[1,0,0.01231,0.03377],[1,0,0.06611,0.07951],[1,0,0.09474,0.17339],[1,0,0.02123,0.03419],[1,0,0.0517,0.08675],[1,0,0.01786,0.03252],[1,0,0.0242,0.02835],[1,0,0.02738,0.0431],[1,0,0.01859,0.02211],[1,0,0.03586,0.03994],[1,0,0.01825,0.03437],[1,0,0.01106,0.03348],[1,0,0.06046,0.08433],[1,0,0.03595,0.11028],[1,0,0.10337,0.12286],[1,0,0.02017,0.0672],[1,0,0.03142,0.05702],[1,0,0.0581,0.21249],[1,0,0.02299,0.05328],[1,0,0.0597,0.14238],[1,0,0.10411,0.27902],[1,0,0.00829,0.0501],[1,0,0.02055,0.07859],[1,0,0.06478,0.07727],[1,0,0.04471,0.13752],[1,0,0.05757,0.06626],[1,0,0.01589,0.03537],[1,0,0.03403,0.08938],[1,0,0.01106,0.0452],[1,0,0.00892,0.10531],[1,0,0.03118,0.0733],[1,0,0.0598,0.09122],[1,1,0.01807,0.09389],[1,1,0.01401,0.10527],[1,1,0.0083,0.08463],[1,1,0.02815,0.15227],[1,1,0.02535,0.13962],[1,1,0.01672,0.14826],[1,1,0.00627,0.04781],[1,1,0.01402,0.09477],[1,1,0.02592,0.10083],[1,1,0.02299,0.11876],[1,1,0.04695,0.1705],[1,1,0.01775,0.15653],[1,1,0.01914,0.08104],[1,1,0.02201,0.15153],[1,1,0.01496,0.12182],[1,1,0.01794,0.06247],[1,1,0.03961,0.12948],[1,1,0.02437,0.08833],[1,1,0.02071,0.12896],[1,1,0.02365,0.11305],[1,1,0.02497,0.08368],[1,1,0.01976,0.19188],[1,1,0.0349,0.16119],[1,1,0.00645,0.11953],[1,1,0.00963,0.06691],[1,1,0.0146,0.09159],[1,1,0.03111,0.15228],[1,1,0.02358,0.09068],[1,1,0.05638,0.13054],[1,1,0.02335,0.11959],[1,1,0.03563,0.14102],[1,1,0.02152,0.09429],[1,1,0.01003,0.09332],[1,1,0.02416,0.11237],[1,1,0.03264,0.17083],[1,1,0.04102,0.0914],[1,1,0.03272,0.14552],[1,1,0.05733,0.22032],[1,1,0.0151,0.0799],[1,1,0.01604,0.11695],[1,1,0.0248,0.11381],[1,1,0.03678,0.13527],[1,1,0.0096,0.08028],[1,1,0.03905,0.13378],[1,1,0.02611,0.11767],[1,1,0.01055,0.04274],[1,1,0.04308,0.20918],[1,1,0.00824,0.15786],[1,1,0.00719,0.07664],[1,1,0.03731,0.18373],[1,1,0.01261,0.05295],[1,1,0.0285,0.10713],[1,1,0.02413,0.09509],[1,1,0.03495,0.21072],[1,1,0.01852,0.09955],[1,1,0.0362,0.16552],[1,1,0.02817,0.16939],[1,1,0.01686,0.07799],[1,1,0.01073,0.08551],[1,1,0.03931,0.17524],[1,1,0.03609,0.14965],[1,1,0.0186,0.17697],[1,1,0.05307,0.20749],[1,1,0.01862,0.16207],[1,1,0.04891,0.13086],[1,1,0.00487,0.08096],[1,1,0.0144,0.17162],[1,1,0.01895,0.0926],[1,1,0.01197,0.14466],[1,1,0.01949,0.13844],[1,1,0.00775,0.1418],[1,1,0.03963,0.11876],[1,1,0.01763,0.15055],[1,1,0.00873,0.0931],[1,1,0.09303,0.20674],[1,1,0.01487,0.08284],[1,1,0.01228,0.03465],[1,1,0.02809,0.16349],[1,1,0.02017,0.09531],[1,1,0.03369,0.1484],[1,1,0.02766,0.15101],[1,1,0.0139,0.07111],[1,1,0.10469,0.22285],[1,1,0.01377,0.0854],[1,1,0.02607,0.13138],[1,1,0.00781,0.07824],[1,1,0.01929,0.11895],[1,1,0.01465,0.08977],[1,1,0.00648,0.12085],[1,1,0.01011,0.12818],[1,1,0.02915,0.13107],[1,1,0.02157,0.11935],[1,1,0.00493,0.09532],[1,1,0.04792,0.16771],[1,1,0.03337,0.1344],[1,1,0.04287,0.0698],[1,1,0.02252,0.08126],[1,1,0.01778,0.08507],[1,1,0.04758,0.15656],[1,1,0.02793,0.11981],[1,2,0.03057,0.19038],[1,2,0.04076,0.15349],[1,2,0.01153,0.1813],[1,2,0.03591,0.12303],[1,2,0.03171,0.07618],[1,2,0.01661,0.10806],[1,2,0.04384,0.3493],[1,2,0.01293,0.26338],[1,2,0.02235,0.12938],[1,2,0.02345,0.06646],[1,2,0.2134,0.1754],[1,2,0.01922,0.1508],[1,2,0.02504,0.10621],[1,2,0.02116,0.15212],[1,2,0.03182,0.11582],[1,2,0.04008,0.14089],[1,2,0.01072,0.33975],[1,2,0.04852,0.1673],[1,2,0.03201,0.39754],[1,2,0.05664,0.18487],[1,2,0.01093,0.02794],[1,2,0.02117,0.05635],[1,2,0.01751,0.08639],[1,2,0.01919,0.1609],[1,2,0.03356,0.20487],[1,2,0.01192,0.06646],[1,2,0.05505,0.23793],[1,2,0.02684,0.11674],[1,2,0.02252,0.1638],[1,2,0.02055,0.38691],[1,2,0.01318,0.15822],[1,2,0.02829,0.1428],[1,2,0.01895,0.14509],[1,2,0.01671,0.1091],[1,2,0.02535,0.35589],[1,2,0.03343,0.05885],[1,2,0.02445,0.20193],[1,2,0.03017,0.15434],[1,2,0.03973,0.21877],[1,2,0.02298,0.28069],[1,2,0.01372,0.184],[1,2,0.04183,0.19528],[1,2,0.02165,0.11974],[1,2,0.02233,0.07856],[1,2,0.02356,0.13367],[1,2,0.02678,0.12325],[1,2,0.02411,0.06234],[1,2,0.03341,0.14126],[1,2,0.02688,0.2903],[1,2,0.0208,0.23466],[1,2,0.05608,0.20715],[1,2,0.0265,0.06971],[1,2,0.04687,0.20437],[1,2,0.03753,0.09615],[1,2,0.02472,0.085],[1,2,0.03256,0.17446],[1,2,0.01756,0.04971],[1,2,0.0125,0.07719],[1,2,0.04287,0.24632],[1,2,0.02659,0.32664],[1,2,0.03939,0.14531],[1,2,0.01,0.14593],[1,2,0.02568,0.16386],[1,2,0.04138,0.18802],[1,2,0.03701,0.24824],[1,2,0.01659,0.31948],[1,2,0.04849,0.20778],[1,2,0.01719,0.27953],[1,2,0.02375,0.2105],[1,2,0.0193,0.1868],[1,2,0.01541,0.13481],[1,2,0.0167,0.05022],[1,2,0.01465,0.19259],[1,2,0.01687,0.2881],[1,2,0.02747,0.18035],[1,2,0.04829,0.18298],[1,2,0.01357,0.11485],[1,2,0.03004,0.06327],[1,2,0.02228,0.11194],[1,2,0.00947,0.09691],[1,2,0.02238,0.08334],[1,2,0.02218,0.07324],[1,2,0.0203,0.065],[1,2,0.02984,0.09499],[1,2,0.01885,0.10389],[1,2,0.02256,0.04806],[1,2,0.02362,0.05958],[1,2,0.01713,0.0563],[1,2,0.0882,0.12535],[1,2,0.11658,0.11507],[1,2,0.03552,0.09478],[1,2,0.01875,0.07097],[1,2,0.02537,0.07643],[1,2,0.01809,0.0989],[1,2,0.1096,0.11322],[1,2,0.06362,0.07972],[1,2,0.00582,0.04527],[1,2,0.03166,0.06616],[1,2,0.05128,0.15074],[1,2,0.0231,0.11114],[1,3,0.07021,0.47803],[1,3,0.09493,0.15182],[1,3,0.08804,0.17147],[1,3,0.09436,0.15515],[1,3,0.10833,0.16134],[1,3,0.13686,0.28883],[1,3,0.22454,0.23347],[1,3,0.04883,0.11099],[1,3,0.09926,0.29295],[1,3,0.03106,0.10151],[1,3,0.07825,0.19192],[1,3,0.0497,0.07284],[1,3,0.01914,0.04073],[1,3,0.02663,0.04778],[1,3,0.04432,0.13793],[1,3,0.06268,0.12553],[1,3,0.02178,0.06552],[1,3,0.08087,0.12011],[1,3,0.2413,0.40218],[1,3,0.03266,0.06047],[1,3,0.06781,0.19102],[1,3,0.08026,0.14032],[1,3,0.15607,0.16833],[1,3,0.03184,0.0952],[1,3,0.12645,0.21767],[1,3,0.06538,0.08928],[1,3,0.04244,0.44917],[1,3,0.03885,0.08301],[1,3,0.03351,0.06515],[1,3,0.00858,0.06705],[1,3,0.0096,0.18878],[1,3,0.01608,0.15829],[1,3,0.01949,0.10002],[1,3,0.04508,0.25595],[1,3,0.01509,0.03027],[1,3,0.04143,0.089],[1,3,0.06436,0.18191],[1,3,0.01417,0.06203],[1,3,0.07763,0.15094],[1,3,0.0394,0.11371],[1,3,0.02683,0.08318],[1,3,0.06233,0.28641],[1,3,0.1847,0.51414],[1,3,0.05227,0.07929],[1,3,0.10559,0.13187],[1,3,0.0721,0.15767],[1,3,0.0373,0.0435],[1,3,0.05569,0.0814],[1,3,0.02007,0.10386],[1,3,0.0699,0.12204],[1,3,0.20515,0.30977],[1,3,0.04877,0.06707],[1,3,0.04332,0.10788],[1,3,0.1064,0.17452],[1,3,0.04975,0.08026],[1,3,0.06483,0.20162],[1,3,0.04032,0.13426],[1,3,0.03633,0.13094],[1,3,0.01662,0.29898],[1,3,0.0605,0.11335],[1,3,0.11113,0.31929],[1,3,0.08567,0.1367],[1,3,0.06709,0.26033],[1,3,0.08666,0.19269],[1,3,0.02119,0.0379],[1,3,0.11342,0.18408],[1,3,0.07961,0.1918],[1,3,0.05521,0.12943],[1,3,0.06814,0.08139],[1,3,0.04369,0.12875],[1,3,0.05259,0.08066],[1,3,0.13146,0.15855],[1,3,0.0664,0.11907],[1,3,0.06169,0.10358],[1,3,0.03163,0.07711],[1,3,0.18425,0.31173],[1,3,0.13136,0.1735],[1,3,0.15136,0.18692],[1,3,0.05213,0.34687],[1,3,0.0394,0.11879],[1,3,0.06245,0.22474],[1,3,0.04644,0.1147],[1,3,0.04052,0.12831],[1,3,0.04841,0.11356],[1,3,0.02197,0.08976],[1,3,0.05369,0.07569],[1,3,0.13279,0.20467],[1,3,0.03427,0.08365],[1,3,0.08652,0.41103],[1,3,0.09538,0.19513],[1,3,0.03882,0.07401],[1,3,0.0221,0.10871],[1,3,0.03698,0.14278],[1,3,0.07443,0.35399],[1,3,0.05596,0.15535],[1,3,0.05312,0.07218],[1,3,0.05216,0.14955],[1,3,0.06352,0.14457],[1,3,0.01147,0.03507],[1,3,0.10257,0.16842],[1,4,0.02902,0.03579],[1,4,0.01422,0.03824],[1,4,0.01391,0.03436],[1,4,0.01285,0.02363],[1,4,0.02343,0.05739],[1,4,0.02334,0.03532],[1,4,0.0259,0.03437],[1,4,0.01353,0.02967],[1,4,0.02293,0.07622],[1,4,0.01459,0.03801],[1,4,0.02414,0.08665],[1,4,0.01308,0.02503],[1,4,0.04195,0.09073],[1,4,0.01644,0.07067],[1,4,0.01311,0.09679],[1,4,0.01221,0.04049],[1,4,0.01595,0.02897],[1,4,0.01048,0.0447],[1,4,0.0204,0.0633],[1,4,0.01165,0.02038],[1,4,0.02064,0.02947],[1,4,0.01124,0.04007],[1,4,0.016,0.03541],[1,4,0.01805,0.0507],[1,4,0.00908,0.03041],[1,4,0.01632,0.03557],[1,4,0.01374,0.05876],[1,4,0.01409,0.03012],[1,4,0.00736,0.02228],[1,4,0.01094,0.03495],[1,4,0.0151,0.03366],[1,4,0.01716,0.05068],[1,4,0.01239,0.02751],[1,4,0.02906,0.10665],[1,4,0.02545,0.03508],[1,4,0.02214,0.0276],[1,4,0.01249,0.03445],[1,4,0.01881,0.03247],[1,4,0.00836,0.0147],[1,4,0.0103,0.02488],[1,4,0.02773,0.03338],[1,4,0.02996,0.08996],[1,4,0.01093,0.02249],[1,4,0.02975,0.05175],[1,4,0.01943,0.04637],[1,4,0.01403,0.02195],[1,4,0.01298,0.0306],[1,4,0.01567,0.04342],[1,4,0.0192,0.02815],[1,4,0.01851,0.04464],[1,4,0.02194,0.04825],[1,4,0.01902,0.03465],[1,4,0.02747,0.05288],[1,4,0.01074,0.0535],[1,4,0.0098,0.04383],[1,4,0.01215,0.0658],[1,4,0.09181,0.13048],[1,4,0.00819,0.03501],[1,4,0.00999,0.02571],[1,4,0.0267,0.05904],[1,4,0.0148,0.02921],[1,4,0.01641,0.07141],[1,4,0.02191,0.04765],[1,4,0.01921,0.02414],[1,4,0.01629,0.04121],[1,4,0.01101,0.0307],[1,4,0.01213,0.01823],[1,4,0.00845,0.09075],[1,4,0.01905,0.06811],[1,4,0.01252,0.0346],[1,4,0.03498,0.06775],[1,4,0.02139,0.08112],[1,4,0.0099,0.02594],[1,4,0.01222,0.07732],[1,4,0.01958,0.08884],[1,4,0.02016,0.05574],[1,4,0.01536,0.03682],[1,4,0.01058,0.01899],[1,4,0.01811,0.05557],[1,4,0.00846,0.05017],[1,4,0.00791,0.02512],[1,4,0.01088,0.04893],[1,4,0.0058,0.02177],[1,4,0.02012,0.03942],[1,4,0.02335,0.0635],[1,4,0.01025,0.02057],[1,4,0.00993,0.04421],[1,4,0.01146,0.03608],[1,4,0.02214,0.03264],[1,4,0.02548,0.05859],[1,4,0.01845,0.03755],[1,4,0.01913,0.05052],[1,4,0.00644,0.01318],[1,4,0.01097,0.02172],[1,4,0.01806,0.04076],[1,4,0.01003,0.04789],[1,4,0.02238,0.03462],[1,4,0.01726,0.05154],[1,4,0.01584,0.045],[1,4,0.02415,0.05513],[1,5,0.05919,0.06029],[1,5,0.05061,0.06922],[1,5,0.12177,0.10922],[1,5,0.152,0.12633],[1,5,0.05464,0.06366],[1,5,0.10255,0.11658],[1,5,0.05734,0.05688],[1,5,0.0534,0.04899],[1,5,0.06425,0.06374],[1,5,0.10066,0.1087],[1,5,0.05265,0.06497],[1,5,0.09285,0.10878],[1,5,0.05427,0.06432],[1,5,0.06605,0.0567],[1,5,0.11563,0.10524],[1,5,0.05811,0.0603],[1,5,0.08977,0.12505],[1,5,0.05967,0.06248],[1,5,0.07478,0.06746],[1,5,0.10589,0.13538],[1,5,0.0633,0.06361],[1,5,0.10845,0.10559],[1,5,0.05593,0.05575],[1,5,0.04799,0.05298],[1,5,0.05318,0.06614],[1,5,0.089,0.09316],[1,5,0.06755,0.06618],[1,5,0.05005,0.05481],[1,5,0.05433,0.06159],[1,5,0.12955,0.15783],[1,5,0.06263,0.05302],[1,5,0.04718,0.0515],[1,5,0.06228,0.05945],[1,5,0.05923,0.06569],[1,5,0.12185,0.14927],[1,5,0.05412,0.05153],[1,5,0.13173,0.12865],[1,5,0.04945,0.05771],[1,5,0.14493,0.13045],[1,5,0.06489,0.06192],[1,5,0.10706,0.12204],[1,5,0.0667,0.05785],[1,5,0.06686,0.06441],[1,5,0.05425,0.05457],[1,5,0.04725,0.04545],[1,5,0.14753,0.13267],[1,5,0.13035,0.15501],[1,5,0.13551,0.14241],[1,5,0.05564,0.0548],[1,5,0.06582,0.07083],[1,5,0.06353,0.06772],[1,5,0.05598,0.0501],[1,5,0.1251,0.12824],[1,5,0.12946,0.10733],[1,5,0.13136,0.12973],[1,5,0.05332,0.05088],[1,5,0.0529,0.06052],[1,5,0.08096,0.07179],[1,5,0.06426,0.06623],[1,5,0.08083,0.06539],[1,5,0.11719,0.10845],[1,5,0.03888,0.03976],[1,5,0.12203,0.13441],[1,5,0.05247,0.05137],[1,5,0.1596,0.12388],[1,5,0.06152,0.05653],[1,5,0.1056,0.11543],[1,5,0.05187,0.04867],[1,5,0.06049,0.0684],[1,5,0.06291,0.04779],[1,5,0.06072,0.05297],[1,5,0.07123,0.09629],[1,5,0.13076,0.14269],[1,5,0.04317,0.05382],[1,5,0.1773,0.13481],[1,5,0.06794,0.07433],[1,5,0.13135,0.13603],[1,5,0.0448,0.04915],[1,5,0.14217,0.10945],[1,5,0.04653,0.04969],[1,5,0.05642,0.06041],[1,5,0.06607,0.06308],[1,5,0.06486,0.06795],[1,5,0.05885,0.06263],[1,5,0.05602,0.05192],[1,5,0.06127,0.08044],[1,5,0.05264,0.05155],[1,5,0.05059,0.06543],[1,5,0.11898,0.12608],[1,5,0.12022,0.10546],[1,5,0.10613,0.11842],[1,5,0.06626,0.06461],[1,5,0.1098,0.11289],[1,5,0.06817,0.06837],[1,5,0.05833,0.04804],[1,5,0.05107,0.04452],[1,5,0.04909,0.05044],[1,5,0.12336,0.12914],[1,5,0.08924,0.08037],[1,5,0.06112,0.0502],[2,0,0.04078,0.15917],[2,0,0.06983,0.19155],[2,0,0.07655,0.16038],[2,0,0.1027,0.17459],[2,0,0.02552,0.13496],[2,0,0.03578,0.05812],[2,0,0.02937,0.25348],[2,0,0.04436,0.12846],[2,0,0.08574,0.10724],[2,0,0.05745,0.12475],[2,0,0.10466,0.20888],[2,0,0.09282,0.14847],[2,0,0.02921,0.12014],[2,0,0.07401,0.21511],[2,0,0.10134,0.23206],[2,0,0.04251,0.07122],[2,0,0.0824,0.20276],[2,0,0.04985,0.1223],[2,0,0.13632,0.27408],[2,0,0.08511,0.16956],[2,0,0.07677,0.2275],[2,0,0.15176,0.19604],[2,0,0.09971,0.12177],[2,0,0.01814,0.23122],[2,0,0.05497,0.13135],[2,0,0.07298,0.19627],[2,0,0.03038,0.15775],[2,0,0.04251,0.13392],[2,0,0.17193,0.27951],[2,0,0.01609,0.03642],[2,0,0.05125,0.09747],[2,0,0.05285,0.17433],[2,0,0.11307,0.24335],[2,0,0.29349,0.40814],[2,0,0.06936,0.15662],[2,0,0.06356,0.19177],[2,0,0.0534,0.13875],[2,0,0.05325,0.22615],[2,0,0.02135,0.08884],[2,0,0.05662,0.18645],[2,0,0.0407,0.08659],[2,0,0.04706,0.28551],[2,0,0.13114,0.13424],[2,0,0.07809,0.12282],[2,0,0.03832,0.18565],[2,0,0.04343,0.15393],[2,0,0.10875,0.17932],[2,0,0.07759,0.19266],[2,0,0.07493,0.27466],[2,0,0.07191,0.28288],[2,0,0.06116,0.15239],[2,0,0.03024,0.2858],[2,0,0.1554,0.22873],[2,0,0.0612,0.1204],[2,0,0.04371,0.13207],[2,0,0.08144,0.28697],[2,0,0.07733,0.21991],[2,0,0.03437,0.07188],[2,0,0.17488,0.21531],[2,0,0.10729,0.27838],[2,0,0.06442,0.11263],[2,0,0.06024,0.13378],[2,0,0.07534,0.20881],[2,0,0.11006,0.12922],[2,0,0.04906,0.13535],[2,0,0.05065,0.0944],[2,0,0.04457,0.1096],[2,0,0.04225,0.10712],[2,0,0.03827,0.09766],[2,0,0.11075,0.24259],[2,0,0.12486,0.21464],[2,0,0.05916,0.09063],[2,0,0.02861,0.15861],[2,0,0.07859,0.32189],[2,0,0.02556,0.31677],[2,0,0.11574,0.23886],[2,0,0.05948,0.20212],[2,0,0.18792,0.28354],[2,0,0.0447,0.05727],[2,0,0.06209,0.17704],[2,0,0.05607,0.2494],[2,0,0.07751,0.13958],[2,0,0.03703,0.17713],[2,0,0.0334,0.1321],[2,0,0.04047,0.2055],[2,0,0.06713,0.12295],[2,0,0.04381,0.23875],[2,0,0.06383,0.09309],[2,0,0.03239,0.14941],[2,0,0.07414,0.1716],[2,0,0.04882,0.25063],[2,0,0.03211,0.16265],[2,0,0.03517,0.12293],[2,0,0.03196,0.07502],[2,0,0.032,0.11778],[2,0,0.08993,0.17659],[2,0,0.20372,0.20196],[2,0,0.04697,0.18387],[2,0,0.01777,0.10467],[2,0,0.04228,0.04413],[2,1,0.01178,0.0534],[2,1,0.00718,0.03772],[2,1,0.01203,0.04632],[2,1,0.03077,0.11399],[2,1,0.01321,0.0677],[2,1,0.0155,0.07174],[2,1,0.02126,0.05123],[2,1,0.01998,0.06506],[2,1,0.01317,0.05739],[2,1,0.00897,0.06956],[2,1,0.02236,0.04995],[2,1,0.01385,0.05392],[2,1,0.01167,0.07855],[2,1,0.01503,0.04963],[2,1,0.02886,0.06987],[2,1,0.01956,0.09431],[2,1,0.00954,0.06525],[2,1,0.02723,0.10625],[2,1,0.01763,0.0645],[2,1,0.02223,0.07538],[2,1,0.03028,0.05906],[2,1,0.00866,0.04665],[2,1,0.01668,0.13336],[2,1,0.03485,0.08852],[2,1,0.02062,0.06209],[2,1,0.01137,0.06014],[2,1,0.06179,0.11366],[2,1,0.01486,0.06782],[2,1,0.01187,0.07993],[2,1,0.02651,0.09609],[2,1,0.05641,0.12372],[2,1,0.01455,0.06225],[2,1,0.01092,0.07927],[2,1,0.04295,0.07061],[2,1,0.01987,0.06473],[2,1,0.0364,0.0642],[2,1,0.02568,0.04436],[2,1,0.01343,0.03874],[2,1,0.07019,0.16219],[2,1,0.01534,0.0727],[2,1,0.01811,0.08715],[2,1,0.06851,0.09612],[2,1,0.03583,0.07811],[2,1,0.0199,0.04982],[2,1,0.01518,0.07571],[2,1,0.01932,0.08424],[2,1,0.06279,0.10618],[2,1,0.04341,0.08886],[2,1,0.01775,0.0687],[2,1,0.01008,0.07595],[2,1,0.01103,0.04298],[2,1,0.01014,0.05056],[2,1,0.02122,0.06657],[2,1,0.0433,0.04023],[2,1,0.02879,0.10074],[2,1,0.01281,0.09113],[2,1,0.07085,0.0807],[2,1,0.03856,0.04552],[2,1,0.01759,0.0624],[2,1,0.02079,0.03094],[2,1,0.01131,0.04618],[2,1,0.0153,0.06259],[2,1,0.0393,0.10339],[2,1,0.03454,0.08792],[2,1,0.04192,0.07499],[2,1,0.01647,0.07823],[2,1,0.01325,0.07645],[2,1,0.01751,0.06079],[2,1,0.01287,0.05085],[2,1,0.01481,0.06811],[2,1,0.02115,0.09538],[2,1,0.02105,0.07624],[2,1,0.02026,0.10889],[2,1,0.01517,0.07504],[2,1,0.06412,0.12115],[2,1,0.02095,0.05374],[2,1,0.01708,0.05596],[2,1,0.02805,0.08001],[2,1,0.01478,0.06346],[2,1,0.01155,0.11415],[2,1,0.01918,0.08335],[2,1,0.08831,0.19896],[2,1,0.04193,0.04545],[2,1,0.0285,0.0851],[2,1,0.00949,0.05749],[2,1,0.021,0.0721],[2,1,0.02638,0.08905],[2,1,0.01442,0.04335],[2,1,0.02602,0.04156],[2,1,0.02743,0.08389],[2,1,0.01594,0.05865],[2,1,0.01651,0.06453],[2,1,0.01532,0.07118],[2,1,0.07391,0.08797],[2,1,0.01568,0.06174],[2,1,0.01386,0.06397],[2,1,0.02173,0.07316],[2,1,0.01976,0.06296],[2,1,0.00976,0.07668],[2,1,0.02894,0.11537],[2,2,0.11951,0.09888],[2,2,0.19243,0.19756],[2,2,0.11552,0.15763],[2,2,0.07924,0.17552],[2,2,0.1453,0.18947],[2,2,0.03367,0.08235],[2,2,0.04211,0.13528],[2,2,0.10295,0.12748],[2,2,0.1608,0.15727],[2,2,0.04441,0.12376],[2,2,0.07143,0.11766],[2,2,0.04163,0.08619],[2,2,0.044,0.07163],[2,2,0.15634,0.20186],[2,2,0.19688,0.24966],[2,2,0.08148,0.1231],[2,2,0.10798,0.16205],[2,2,0.20275,0.18621],[2,2,0.06203,0.12612],[2,2,0.13421,0.18001],[2,2,0.17754,0.21875],[2,2,0.13965,0.14892],[2,2,0.21344,0.32789],[2,2,0.13045,0.12044],[2,2,0.20946,0.16142],[2,2,0.11785,0.1603],[2,2,0.17135,0.19624],[2,2,0.2058,0.2182],[2,2,0.12784,0.14806],[2,2,0.05239,0.11143],[2,2,0.16673,0.15755],[2,2,0.06665,0.08647],[2,2,0.02804,0.10534],[2,2,0.13592,0.13702],[2,2,0.10152,0.15427],[2,2,0.16279,0.18464],[2,2,0.04099,0.08486],[2,2,0.19793,0.1835],[2,2,0.18616,0.19996],[2,2,0.16578,0.22089],[2,2,0.14978,0.19503],[2,2,0.03648,0.09784],[2,2,0.17527,0.20391],[2,2,0.07756,0.13629],[2,2,0.02306,0.0587],[2,2,0.07204,0.08204],[2,2,0.04942,0.12414],[2,2,0.06666,0.07566],[2,2,0.16847,0.16133],[2,2,0.06457,0.08208],[2,2,0.07035,0.10183],[2,2,0.1582,0.21947],[2,2,0.18031,0.19332],[2,2,0.16814,0.22841],[2,2,0.14555,0.16563],[2,2,0.17386,0.22671],[2,2,0.24613,0.28086],[2,2,0.04393,0.11615],[2,2,0.13111,0.13458],[2,2,0.15074,0.14872],[2,2,0.14397,0.14623],[2,2,0.13523,0.12179],[2,2,0.06897,0.09314],[2,2,0.20198,0.17895],[2,2,0.15086,0.17533],[2,2,0.08476,0.11024],[2,2,0.12822,0.1999],[2,2,0.07547,0.12121],[2,2,0.10672,0.16148],[2,2,0.08794,0.21855],[2,2,0.14138,0.17145],[2,2,0.20857,0.27847],[2,2,0.12845,0.12808],[2,2,0.06044,0.11185],[2,2,0.07337,0.06481],[2,2,0.19106,0.19236],[2,2,0.03791,0.0863],[2,2,0.11339,0.15676],[2,2,0.10494,0.16526],[2,2,0.07612,0.08851],[2,2,0.07634,0.13729],[2,2,0.04684,0.19688],[2,2,0.06239,0.10936],[2,2,0.0806,0.09996],[2,2,0.08054,0.13964],[2,2,0.12256,0.16537],[2,2,0.10292,0.22729],[2,2,0.09624,0.14681],[2,2,0.05956,0.09867],[2,2,0.08215,0.12236],[2,2,0.06523,0.14064],[2,2,0.07234,0.18082],[2,2,0.14143,0.21029],[2,2,0.05709,0.0876],[2,2,0.1384,0.20443],[2,2,0.0374,0.1067],[2,2,0.04983,0.12321],[2,2,0.14572,0.2168],[2,2,0.05568,0.16198],[2,2,0.10977,0.14187],[2,3,0.08483,0.09826],[2,3,0.29414,0.32796],[2,3,0.05746,0.07545],[2,3,0.09845,0.09431],[2,3,0.05042,0.07189],[2,3,0.04907,0.06702],[2,3,0.06332,0.08813],[2,3,0.06639,0.05819],[2,3,0.14004,0.27991],[2,3,0.13374,0.21458],[2,3,0.11915,0.14812],[2,3,0.08508,0.18126],[2,3,0.08012,0.099],[2,3,0.11572,0.12856],[2,3,0.11916,0.24397],[2,3,0.22423,0.3281],[2,3,0.17717,0.17094],[2,3,0.11231,0.10768],[2,3,0.03282,0.06459],[2,3,0.06346,0.07528],[2,3,0.07934,0.07559],[2,3,0.21715,0.36714],[2,3,0.03556,0.04337],[2,3,0.06845,0.19875],[2,3,0.05507,0.24645],[2,3,0.02496,0.07959],[2,3,0.0543,0.15241],[2,3,0.06348,0.10909],[2,3,0.13404,0.45324],[2,3,0.06953,0.07906],[2,3,0.06763,0.092],[2,3,0.10286,0.2422],[2,3,0.03795,0.07788],[2,3,0.06182,0.12155],[2,3,0.11782,0.24613],[2,3,0.09043,0.09727],[2,3,0.14822,0.17726],[2,3,0.04895,0.0656],[2,3,0.04277,0.15199],[2,3,0.01281,0.12695],[2,3,0.12915,0.2716],[2,3,0.1287,0.14046],[2,3,0.09502,0.06456],[2,3,0.07399,0.09312],[2,3,0.08546,0.25133],[2,3,0.06638,0.06836],[2,3,0.14949,0.19199],[2,3,0.14058,0.33532],[2,3,0.04765,0.15999],[2,3,0.08608,0.09407],[2,3,0.03888,0.16401],[2,3,0.0613,0.11997],[2,3,0.06378,0.36743],[2,3,0.08185,0.09225],[2,3,0.05883,0.08154],[2,3,0.08984,0.12184],[2,3,0.11164,0.09585],[2,3,0.21731,0.21166],[2,3,0.14693,0.17532],[2,3,0.24867,0.24464],[2,3,0.15558,0.17778],[2,3,0.15885,0.22799],[2,3,0.03958,0.3074],[2,3,0.13984,0.18614],[2,3,0.05422,0.09154],[2,3,0.0668,0.07316],[2,3,0.08112,0.14343],[2,3,0.06935,0.11484],[2,3,0.19493,0.64934],[2,3,0.10946,0.19869],[2,3,0.04738,0.07043],[2,3,0.12077,0.17058],[2,3,0.04542,0.12216],[2,3,0.01527,0.05389],[2,3,0.07764,0.2024],[2,3,0.09141,0.17946],[2,3,0.1399,0.16724],[2,3,0.06204,0.13501],[2,3,0.16123,0.16439],[2,3,0.08948,0.15972],[2,3,0.10144,0.28102],[2,3,0.06983,0.06553],[2,3,0.03218,0.08993],[2,3,0.07244,0.12049],[2,3,0.0767,0.11579],[2,3,0.07431,0.11094],[2,3,0.1458,0.60381],[2,3,0.03264,0.08387],[2,3,0.25239,0.38488],[2,3,0.09754,0.20957],[2,3,0.04083,0.06347],[2,3,0.07329,0.0851],[2,3,0.04452,0.13204],[2,3,0.08065,0.14346],[2,3,0.14194,0.20629],[2,3,0.05477,0.18036],[2,3,0.06907,0.10378],[2,3,0.1219,0.177],[2,3,0.04499,0.09907],[2,3,0.17023,0.21733],[2,4,0.03806,0.0616],[2,4,0.10332,0.10855],[2,4,0.0516,0.07024],[2,4,0.06401,0.10645],[2,4,0.03864,0.09839],[2,4,0.02998,0.05235],[2,4,0.04842,0.04967],[2,4,0.0719,0.10004],[2,4,0.05904,0.10235],[2,4,0.06245,0.11708],[2,4,0.03063,0.06185],[2,4,0.09935,0.14188],[2,4,0.03076,0.08574],[2,4,0.03167,0.10032],[2,4,0.0514,0.06325],[2,4,0.0542,0.05881],[2,4,0.07148,0.11626],[2,4,0.03253,0.06368],[2,4,0.04447,0.08339],[2,4,0.0335,0.05614],[2,4,0.06882,0.1082],[2,4,0.05378,0.07454],[2,4,0.05905,0.07643],[2,4,0.15471,0.1557],[2,4,0.03541,0.08259],[2,4,0.07611,0.14533],[2,4,0.04994,0.06209],[2,4,0.03844,0.0647],[2,4,0.02451,0.0593],[2,4,0.03993,0.06798],[2,4,0.05384,0.1064],[2,4,0.0311,0.05894],[2,4,0.03508,0.10924],[2,4,0.0251,0.03178],[2,4,0.067,0.07084],[2,4,0.04567,0.10402],[2,4,0.04716,0.05161],[2,4,0.06176,0.1133],[2,4,0.03925,0.06274],[2,4,0.09216,0.09903],[2,4,0.04424,0.07751],[2,4,0.05469,0.09706],[2,4,0.04963,0.08542],[2,4,0.03487,0.07198],[2,4,0.04631,0.07085],[2,4,0.05532,0.06578],[2,4,0.0447,0.08641],[2,4,0.03168,0.0796],[2,4,0.03761,0.04936],[2,4,0.10003,0.0798],[2,4,0.06342,0.07543],[2,4,0.02639,0.06546],[2,4,0.03273,0.06093],[2,4,0.06188,0.05431],[2,4,0.05075,0.08749],[2,4,0.05729,0.0732],[2,4,0.03368,0.0658],[2,4,0.03099,0.10142],[2,4,0.02208,0.03829],[2,4,0.06722,0.06946],[2,4,0.08687,0.09577],[2,4,0.02081,0.10884],[2,4,0.08834,0.0795],[2,4,0.06068,0.09147],[2,4,0.06717,0.07532],[2,4,0.0693,0.05936],[2,4,0.09477,0.13098],[2,4,0.03985,0.06641],[2,4,0.02401,0.10095],[2,4,0.08414,0.11224],[2,4,0.03358,0.06306],[2,4,0.02554,0.05262],[2,4,0.07577,0.10589],[2,4,0.05069,0.07983],[2,4,0.05101,0.09426],[2,4,0.02844,0.04184],[2,4,0.06929,0.11592],[2,4,0.03323,0.07238],[2,4,0.09278,0.10172],[2,4,0.05109,0.08896],[2,4,0.06874,0.13752],[2,4,0.06211,0.09697],[2,4,0.01948,0.08775],[2,4,0.08484,0.09173],[2,4,0.02536,0.07381],[2,4,0.05613,0.07368],[2,4,0.03166,0.08312],[2,4,0.03295,0.09209],[2,4,0.07064,0.06283],[2,4,0.03301,0.04659],[2,4,0.06813,0.11737],[2,4,0.02816,0.04017],[2,4,0.08701,0.10299],[2,4,0.02404,0.03693],[2,4,0.01908,0.09047],[2,4,0.04188,0.06567],[2,4,0.04908,0.10637],[2,4,0.03616,0.07691],[2,4,0.02026,0.03979],[2,4,0.02888,0.04334],[2,5,0.03434,0.13571],[2,5,0.04635,0.17824],[2,5,0.08502,0.20333],[2,5,0.08161,0.19689],[2,5,0.0819,0.19037],[2,5,0.13646,0.1949],[2,5,0.05099,0.14835],[2,5,0.09559,0.16499],[2,5,0.10242,0.26045],[2,5,0.09604,0.17303],[2,5,0.08243,0.25703],[2,5,0.04363,0.15734],[2,5,0.09077,0.18118],[2,5,0.04653,0.13382],[2,5,0.06802,0.19283],[2,5,0.0585,0.15412],[2,5,0.03864,0.1184],[2,5,0.05897,0.16243],[2,5,0.04032,0.13242],[2,5,0.06935,0.15793],[2,5,0.08505,0.17952],[2,5,0.07207,0.19624],[2,5,0.06349,0.18725],[2,5,0.07037,0.19506],[2,5,0.05094,0.1433],[2,5,0.06242,0.14148],[2,5,0.09881,0.20477],[2,5,0.05564,0.14794],[2,5,0.06494,0.1715],[2,5,0.07628,0.16818],[2,5,0.07267,0.19217],[2,5,0.05585,0.20308],[2,5,0.10518,0.21143],[2,5,0.06538,0.13358],[2,5,0.0401,0.15049],[2,5,0.05936,0.16757],[2,5,0.04642,0.20218],[2,5,0.05506,0.17324],[2,5,0.08402,0.23143],[2,5,0.06011,0.17187],[2,5,0.08114,0.1847],[2,5,0.08894,0.24046],[2,5,0.06352,0.17694],[2,5,0.04573,0.17937],[2,5,0.0402,0.15375],[2,5,0.07991,0.1502],[2,5,0.06144,0.16365],[2,5,0.05431,0.16004],[2,5,0.06887,0.16073],[2,5,0.04532,0.17021],[2,5,0.08755,0.22922],[2,5,0.05372,0.16158],[2,5,0.06502,0.21947],[2,5,0.05882,0.15838],[2,5,0.092,0.2123],[2,5,0.03264,0.13894],[2,5,0.10633,0.19244],[2,5,0.14408,0.27453],[2,5,0.04655,0.1369],[2,5,0.04351,0.15726],[2,5,0.04814,0.13567],[2,5,0.04592,0.17316],[2,5,0.08164,0.2018],[2,5,0.09055,0.18544],[2,5,0.06899,0.18336],[2,5,0.06542,0.18188],[2,5,0.06192,0.19253],[2,5,0.0445,0.13773],[2,5,0.08138,0.20069],[2,5,0.04681,0.12777],[2,5,0.07858,0.20343],[2,5,0.06184,0.17043],[2,5,0.04459,0.18572],[2,5,0.05617,0.18815],[2,5,0.05952,0.15211],[2,5,0.05469,0.1584],[2,5,0.05792,0.17265],[2,5,0.05282,0.20112],[2,5,0.08608,0.21588],[2,5,0.05645,0.15346],[2,5,0.07888,0.29271],[2,5,0.05758,0.16171],[2,5,0.08383,0.20888],[2,5,0.08045,0.22791],[2,5,0.07742,0.18285],[2,5,0.05835,0.15664],[2,5,0.05935,0.15123],[2,5,0.05032,0.17413],[2,5,0.06024,0.14401],[2,5,0.05066,0.24717],[2,5,0.08996,0.20118],[2,5,0.06876,0.22683],[2,5,0.06679,0.12972],[2,5,0.05437,0.18713],[2,5,0.07701,0.20316],[2,5,0.0936,0.28006],[2,5,0.04435,0.15833],[2,5,0.05185,0.19678],[2,5,0.09198,0.16394],[2,5,0.07302,0.20258]],"cells":[[0,0,0.04097,0.08333,0.98],[0,1,0.03332,0.07638,0.99],[0,2,0.03872,0.0808,1.0],[0,3,0.05558,0.09428,0.92],[0,4,0.02132,0.02402,0.66],[0,5,0.02165,0.03198,0.98],[1,0,0.02348,0.05794,0.98],[1,1,0.02179,0.11956,1.0],[1,2,0.02428,0.14107,0.98],[1,3,0.05545,0.13307,1.0],[1,4,0.01589,0.03812,1.0],[1,5,0.06456,0.06556,0.54],[2,0,0.05932,0.1661,0.99],[2,1,0.01944,0.07024,0.99],[2,2,0.10887,0.14882,0.87],[2,3,0.08039,0.13773,0.9],[2,4,0.04875,0.07851,0.95],[2,5,0.06296,0.17759,1.0]]},"steer":{"held":[[0.3593,0.3577,0.3573],[0.3543,0.351,0.3493],[0.3579,0.3576,0.3623],[0.3521,0.3509,0.3513],[0.3593,0.3618,0.3613],[0.3586,0.3583,0.3565],[0.3621,0.357,0.3587],[0.3586,0.3599,0.3589],[0.3607,0.3607,0.3623],[0.3621,0.357,0.3545],[0.3514,0.3564,0.3537],[0.3543,0.3588,0.3595],[0.3571,0.353,0.3563],[0.3614,0.3538,0.3579],[0.3614,0.3616,0.3615],[0.35,0.3573,0.3499],[0.3529,0.3554,0.3553],[0.3543,0.3523,0.3511],[0.355,0.3539,0.3569],[0.355,0.358,0.357],[0.3629,0.3619,0.3627],[0.3607,0.3598,0.3593],[0.3564,0.3564,0.3612],[0.3521,0.3528,0.3546],[0.3614,0.3624,0.3637],[0.3614,0.3566,0.3594],[0.36,0.3559,0.3599],[0.3557,0.3516,0.3566],[0.35,0.3586,0.3523],[0.3557,0.356,0.3593],[0.3629,0.3599,0.3623],[0.3536,0.3521,0.3547],[0.3521,0.3555,0.3525],[0.3543,0.3507,0.3533],[0.3571,0.353,0.3502],[0.3579,0.3573,0.3578],[0.3571,0.3528,0.3566],[0.3571,0.3538,0.358],[0.3579,0.3547,0.3581],[0.3629,0.3568,0.3598],[0.3521,0.3522,0.3562],[0.3571,0.358,0.3579],[0.3557,0.3524,0.351],[0.36,0.3574,0.3586],[0.3564,0.3568,0.3575],[0.3564,0.36,0.3615],[0.3486,0.3532,0.3559],[0.3543,0.3566,0.356],[0.3543,0.3543,0.3589],[0.3579,0.3513,0.3549],[0.3529,0.3529,0.352],[0.3493,0.3545,0.3494],[0.3543,0.3563,0.3559],[0.36,0.3576,0.3601],[0.36,0.3553,0.3576],[0.3557,0.3572,0.3582],[0.3543,0.3552,0.3531],[0.3607,0.3592,0.3609],[0.3607,0.3527,0.3532],[0.3529,0.3535,0.3542],[0.3636,0.3615,0.3634],[0.355,0.3579,0.3543],[0.3457,0.3507,0.3443],[0.355,0.3542,0.3563],[0.3564,0.3566,0.3566],[0.3514,0.3552,0.3542],[0.355,0.3524,0.3565],[0.3543,0.3571,0.356],[0.3521,0.3547,0.3568],[0.3629,0.3598,0.3612],[0.3543,0.3539,0.3595],[0.3543,0.3533,0.3541],[0.3529,0.3528,0.3563],[0.3521,0.3559,0.3517],[0.3586,0.3592,0.3574],[0.355,0.3581,0.3585],[0.3586,0.3532,0.3568],[0.355,0.3529,0.3548],[0.3629,0.3545,0.3549],[0.3529,0.3537,0.3536],[0.3536,0.358,0.3589],[0.3571,0.3533,0.3552],[0.3579,0.3579,0.3555],[0.3543,0.3558,0.3561],[0.3564,0.3583,0.3588],[0.3486,0.3538,0.3529],[0.3579,0.3587,0.3562],[0.3629,0.3607,0.3628],[0.3493,0.3539,0.3496],[0.3571,0.3616,0.3584],[0.3629,0.3549,0.3582],[0.3564,0.3544,0.3576],[0.3579,0.3537,0.3568],[0.3479,0.3546,0.3466],[0.3557,0.3578,0.3593],[0.3586,0.3551,0.3556],[0.3614,0.357,0.3603],[0.3557,0.3551,0.3566],[0.3471,0.3573,0.3547],[0.3486,0.3516,0.3504],[0.3564,0.36,0.3576],[0.3579,0.3618,0.3581],[0.35,0.3556,0.3534],[0.3493,0.3548,0.3476],[0.3571,0.357,0.3578],[0.355,0.3571,0.3549],[0.3607,0.3616,0.3632],[0.3614,0.3607,0.3629],[0.3571,0.3586,0.3587],[0.3557,0.3592,0.3595],[0.3586,0.3568,0.3542],[0.3564,0.3553,0.3552],[0.3486,0.3519,0.3535],[0.3607,0.3605,0.3616],[0.355,0.3577,0.3522],[0.3586,0.3588,0.3603],[0.3529,0.3562,0.3554],[0.35,0.3555,0.3556],[0.3514,0.3572,0.3556],[0.36,0.3561,0.3573],[0.3579,0.3583,0.3573],[0.3636,0.3611,0.3639],[0.3543,0.3526,0.3515],[0.3579,0.3588,0.3596],[0.3607,0.3618,0.3549],[0.355,0.3574,0.3582],[0.3521,0.3519,0.3561],[0.3479,0.3533,0.3506],[0.3536,0.3575,0.3552],[0.355,0.3566,0.3538],[0.355,0.3566,0.354],[0.3564,0.3581,0.3577],[0.3536,0.3547,0.3585],[0.3564,0.356,0.3561],[0.36,0.36,0.3615],[0.3571,0.3545,0.3548],[0.3621,0.3588,0.3639],[0.3636,0.3587,0.363],[0.3471,0.3519,0.3463],[0.3471,0.3526,0.3513],[0.3636,0.3574,0.3596],[0.3629,0.3594,0.3598],[0.3564,0.3582,0.3593],[0.3564,0.3546,0.3581],[0.3557,0.3599,0.3562],[0.365,0.3599,0.3623],[0.3471,0.3559,0.3562],[0.36,0.3585,0.3588],[0.3514,0.3531,0.3559],[0.3493,0.3515,0.3435],[0.355,0.3568,0.3583],[0.3571,0.362,0.3579],[0.3543,0.3509,0.3529],[0.3536,0.36,0.3522],[0.3579,0.3593,0.3573],[0.3557,0.3545,0.3553],[0.3521,0.3522,0.3528],[0.3621,0.3591,0.3595],[0.3571,0.3606,0.3539],[0.3579,0.3543,0.3547],[0.3529,0.3523,0.3493],[0.3586,0.3532,0.3569],[0.3536,0.357,0.3596],[0.3486,0.3533,0.3464],[0.3536,0.3537,0.3537],[0.3557,0.3566,0.356],[0.3521,0.3542,0.3508],[0.355,0.3538,0.3553],[0.355,0.3581,0.3593],[0.3571,0.3532,0.3552],[0.3536,0.3542,0.3516],[0.3621,0.3628,0.3643],[0.3564,0.3602,0.357],[0.3557,0.3589,0.3575],[0.3457,0.3542,0.344],[0.3443,0.3509,0.3499],[0.36,0.3561,0.3588],[0.3471,0.3523,0.3507],[0.3586,0.3554,0.3566],[0.3543,0.3523,0.3531],[0.3507,0.3483,0.3495],[0.3629,0.3585,0.3601],[0.3507,0.3556,0.3513],[0.3514,0.3541,0.3562],[0.3536,0.3546,0.3533],[0.3529,0.3546,0.3522],[0.36,0.3567,0.3616],[0.3429,0.3532,0.3477],[0.3557,0.3559,0.3541],[0.3571,0.358,0.3577],[0.3507,0.3516,0.3497],[0.3614,0.3572,0.3571],[0.3586,0.351,0.356],[0.3586,0.358,0.3578],[0.3629,0.3585,0.3596],[0.3564,0.3546,0.3579],[0.3636,0.3559,0.359],[0.3514,0.3589,0.3529],[0.355,0.3552,0.3568],[0.3607,0.3613,0.3609],[0.3514,0.3599,0.3506],[0.355,0.3512,0.3538],[0.3521,0.3543,0.3515],[0.3564,0.3544,0.353],[0.36,0.3544,0.3571],[0.3564,0.3561,0.3585],[0.3557,0.3501,0.3532],[0.3507,0.3553,0.3506],[0.3607,0.3601,0.3622],[0.3629,0.3543,0.3554],[0.3586,0.3591,0.3587],[0.3529,0.3585,0.3537],[0.3486,0.3518,0.3488],[0.3564,0.3559,0.3575],[0.365,0.3613,0.3613],[0.3529,0.3524,0.3537],[0.35,0.3547,0.3517],[0.3543,0.3584,0.3552],[0.3514,0.3523,0.3526],[0.3479,0.354,0.3481],[0.345,0.3469,0.3499],[0.3514,0.3517,0.3524],[0.3571,0.3605,0.3583],[0.3629,0.3594,0.3611],[0.3643,0.3613,0.3641],[0.355,0.3525,0.3535],[0.3564,0.3526,0.3565],[0.37,0.3641,0.3657],[0.365,0.3581,0.3634],[0.3579,0.3565,0.3554],[0.365,0.3595,0.3641],[0.3521,0.35,0.3526],[0.3571,0.3535,0.3566],[0.3536,0.3537,0.3537],[0.3507,0.3561,0.35],[0.3557,0.3575,0.3592],[0.3593,0.3602,0.3577],[0.3579,0.3528,0.3545],[0.3536,0.3553,0.3519],[0.3543,0.3492,0.3533],[0.3586,0.3556,0.3553],[0.35,0.3497,0.3529],[0.35,0.3563,0.3538],[0.3671,0.3579,0.356],[0.3571,0.3547,0.3543],[0.3586,0.3534,0.3564],[0.3621,0.3606,0.3619],[0.3557,0.3573,0.3555],[0.3614,0.3625,0.3616],[0.3614,0.3587,0.3582],[0.355,0.3543,0.3557],[0.355,0.3583,0.3579],[0.35,0.3545,0.3545],[0.365,0.3622,0.3611],[0.3521,0.3526,0.3528],[0.355,0.3553,0.3489],[0.355,0.3598,0.3572],[0.3557,0.358,0.3593],[0.3571,0.3544,0.3585],[0.3607,0.3555,0.3585],[0.3521,0.3571,0.3563],[0.355,0.357,0.3537],[0.3557,0.3557,0.3564],[0.3543,0.354,0.3547],[0.355,0.3565,0.3554],[0.3536,0.3586,0.3585],[0.3514,0.3508,0.3522],[0.3521,0.3505,0.3502],[0.3564,0.3521,0.3507],[0.3507,0.3553,0.3494],[0.3607,0.3581,0.3601],[0.3607,0.3624,0.3604],[0.3643,0.3627,0.3624],[0.3507,0.3549,0.3518],[0.3557,0.353,0.3544],[0.35,0.3561,0.3505],[0.3543,0.3577,0.3519],[0.3664,0.3626,0.3634],[0.36,0.3555,0.3572],[0.3486,0.3573,0.3488],[0.3479,0.354,0.3567],[0.3571,0.3541,0.3546],[0.3607,0.361,0.3624],[0.3479,0.3533,0.3475],[0.36,0.3581,0.3621],[0.3564,0.3518,0.3563],[0.3443,0.3539,0.3491],[0.3457,0.3487,0.3497],[0.3557,0.3591,0.3624],[0.36,0.3585,0.3597],[0.3586,0.3592,0.3603],[0.36,0.3569,0.3578],[0.3564,0.3561,0.3572],[0.3571,0.3597,0.3617],[0.3507,0.3499,0.3515],[0.3493,0.3541,0.3543],[0.3529,0.3523,0.3557],[0.3571,0.3586,0.3517],[0.3514,0.3568,0.3551],[0.355,0.3523,0.3577],[0.3614,0.361,0.3644],[0.3571,0.3542,0.3575],[0.3586,0.3582,0.358],[0.3514,0.356,0.3591],[0.3579,0.3565,0.3579],[0.3571,0.3557,0.3564],[0.3571,0.3521,0.3554],[0.3514,0.3563,0.3536],[0.36,0.3578,0.3605],[0.3564,0.3613,0.3588],[0.3586,0.3595,0.3591],[0.3529,0.3537,0.354],[0.3507,0.3513,0.3542],[0.3521,0.3519,0.352],[0.3579,0.3556,0.3561],[0.3629,0.3561,0.3592],[0.3536,0.3506,0.3547],[0.365,0.3583,0.3616],[0.3557,0.3536,0.3545],[0.3543,0.3569,0.3556],[0.3564,0.3527,0.3547],[0.3529,0.3508,0.3526],[0.3571,0.3583,0.3603],[0.3557,0.3531,0.3567],[0.3479,0.3519,0.3448],[0.355,0.3554,0.3543],[0.3557,0.3521,0.3556],[0.3493,0.3492,0.3487],[0.3529,0.3527,0.3566],[0.3479,0.354,0.3506],[0.3571,0.3551,0.3563],[0.3486,0.3544,0.349],[0.35,0.3546,0.3522],[0.3529,0.3546,0.3535],[0.3543,0.3584,0.3546],[0.3529,0.3531,0.3571],[0.3586,0.3576,0.3598],[0.3557,0.3543,0.356],[0.3571,0.3541,0.3587],[0.3614,0.3592,0.3622],[0.3579,0.3556,0.3586],[0.3607,0.3604,0.3615],[0.3543,0.3552,0.3562],[0.355,0.3579,0.3548],[0.3593,0.3559,0.3585],[0.3571,0.3522,0.3552],[0.3586,0.3573,0.3603],[0.3543,0.3535,0.3564],[0.355,0.3586,0.3581],[0.3514,0.353,0.3515],[0.3629,0.3607,0.3628],[0.3557,0.3564,0.3578],[0.36,0.3582,0.3587],[0.3557,0.3546,0.3587],[0.3629,0.3572,0.3601],[0.36,0.3549,0.3559],[0.36,0.3563,0.3587],[0.3443,0.3535,0.3438],[0.35,0.3527,0.3485],[0.3607,0.3561,0.3577],[0.35,0.3513,0.35],[0.3593,0.3561,0.3584],[0.355,0.3577,0.3572],[0.3479,0.3547,0.3517],[0.3529,0.3554,0.3534],[0.3536,0.3574,0.3581],[0.3486,0.3577,0.348],[0.3536,0.3526,0.3563],[0.3593,0.3584,0.3555],[0.3593,0.3576,0.3596],[0.3521,0.3578,0.3552],[0.3593,0.3596,0.3616],[0.3514,0.3533,0.3538],[0.3593,0.358,0.36],[0.3536,0.353,0.354],[0.3614,0.359,0.362],[0.3629,0.3582,0.3638],[0.3586,0.352,0.3538],[0.3521,0.3533,0.358],[0.3579,0.3594,0.3602],[0.3636,0.3603,0.3602],[0.3564,0.3549,0.3568],[0.3571,0.3546,0.3568],[0.3486,0.3477,0.3527],[0.3507,0.3577,0.3514],[0.3529,0.3512,0.353],[0.3579,0.3596,0.3631],[0.3586,0.3602,0.3612],[0.3521,0.3531,0.354],[0.3443,0.3534,0.3431],[0.3607,0.3607,0.3625],[0.365,0.3588,0.3574],[0.3529,0.3524,0.3532],[0.3593,0.3601,0.3618],[0.3486,0.3581,0.3504],[0.3479,0.3575,0.3481],[0.3557,0.3529,0.3513],[0.3571,0.3524,0.3547],[0.3636,0.3642,0.3628],[0.3579,0.3538,0.3574],[0.3543,0.3518,0.3511],[0.3571,0.3571,0.354],[0.3564,0.3576,0.3573],[0.3593,0.3572,0.3568],[0.3521,0.3512,0.3515],[0.3529,0.3567,0.354],[0.3579,0.3563,0.3574],[0.3507,0.3537,0.3508],[0.35,0.3542,0.3457],[0.3514,0.3593,0.3547],[0.3621,0.3603,0.3637],[0.3543,0.3576,0.353],[0.3586,0.3556,0.3599],[0.3514,0.3573,0.352],[0.3593,0.3583,0.3624],[0.3571,0.356,0.3546],[0.3579,0.3584,0.3604],[0.3607,0.361,0.3638],[0.3593,0.3573,0.3602],[0.3629,0.3599,0.3609],[0.36,0.3564,0.36],[0.3579,0.3542,0.355],[0.3543,0.3508,0.3514],[0.3657,0.3609,0.3606],[0.3557,0.3572,0.3594],[0.3607,0.3597,0.3612],[0.3614,0.3551,0.3589],[0.3564,0.3567,0.3563],[0.3514,0.3508,0.3499],[0.3607,0.3566,0.36],[0.3529,0.3528,0.3504],[0.3529,0.3539,0.3511],[0.3629,0.3582,0.3575],[0.3614,0.3621,0.3581],[0.3521,0.3506,0.3541],[0.345,0.3524,0.3484],[0.3464,0.351,0.349],[0.3579,0.3559,0.3573],[0.3514,0.3539,0.3601],[0.3564,0.3571,0.3598],[0.3614,0.3586,0.3632],[0.3571,0.3587,0.362],[0.3514,0.3532,0.3532],[0.3614,0.3598,0.3629],[0.35,0.3578,0.3529],[0.3479,0.3524,0.347],[0.355,0.3578,0.3557],[0.3629,0.3575,0.3601],[0.36,0.3583,0.3594],[0.3629,0.3598,0.3609],[0.3536,0.3519,0.3512],[0.3521,0.3524,0.3535],[0.3543,0.3544,0.3557],[0.3543,0.3582,0.3558],[0.3579,0.352,0.3573],[0.3514,0.3544,0.3498],[0.3671,0.3637,0.364],[0.3514,0.357,0.3518],[0.3636,0.3615,0.3636],[0.3621,0.3578,0.3584],[0.3493,0.3542,0.3576],[0.3586,0.3574,0.3615],[0.3557,0.3572,0.3575],[0.3471,0.3526,0.3483],[0.3514,0.3553,0.3585],[0.3586,0.3533,0.3519],[0.3557,0.3542,0.3577],[0.355,0.3561,0.3557],[0.3593,0.3601,0.3625],[0.355,0.3568,0.3592],[0.3571,0.3569,0.359],[0.3571,0.3526,0.3536],[0.35,0.3542,0.3558],[0.36,0.3559,0.3578],[0.3514,0.3534,0.3554],[0.3607,0.3594,0.3579],[0.355,0.3596,0.3612],[0.3514,0.3534,0.3543],[0.3571,0.3547,0.3582],[0.3607,0.3517,0.3538],[0.3514,0.3534,0.3563],[0.3536,0.3541,0.3525],[0.3536,0.3539,0.3546],[0.355,0.356,0.3568],[0.3607,0.3568,0.3584],[0.3443,0.3544,0.3504],[0.3507,0.3541,0.3544],[0.3621,0.3592,0.3624],[0.3571,0.3559,0.3576],[0.35,0.3506,0.3502],[0.3543,0.3563,0.3592],[0.3621,0.3589,0.3609],[0.3493,0.3542,0.3472],[0.3564,0.3516,0.3511],[0.365,0.3614,0.3606],[0.3536,0.3554,0.3536],[0.3507,0.3564,0.3531],[0.3571,0.3601,0.364],[0.355,0.356,0.3512],[0.345,0.3527,0.3488],[0.3629,0.3578,0.3585],[0.3607,0.358,0.3592],[0.3564,0.3532,0.3556],[0.3536,0.3566,0.3588],[0.3543,0.3578,0.3531],[0.3557,0.3509,0.3513],[0.3571,0.3543,0.3537],[0.3521,0.3552,0.355],[0.3607,0.3589,0.3609],[0.3614,0.3559,0.3579],[0.3507,0.3516,0.3511],[0.3529,0.3562,0.352]],"domains":[["biology",0.5815,0.6463,0.56,0.037,0.6684,0.1187,0.108],["business",0.6666,0.5417,0.3878,0.4183,0.6784,0.1287,0.0693],["chemistry",0.9179,0.317,0.565,0.3844,0.713,0.3078,0.0932],["computer science",0.542,0.6841,0.5356,0.0119,0.6962,0.1043,0.096],["economics",0.5781,0.6558,0.615,-0.0639,0.6465,0.1071,0.1073],["engineering",0.2238,0.8731,0.1871,0.1637,0.8689,0.0205,0.0212],["health",0.8685,0.3698,0.6871,0.2089,0.5922,0.2634,0.1301],["history",0.695,0.5716,0.4261,0.3869,0.7635,0.152,0.0609],["law",0.7685,0.5062,0.9275,-0.2069,0.4155,0.1904,0.2429],["math",0.6151,0.6244,0.6543,-0.0638,0.5988,0.1243,0.1368],["other",0.4958,0.6889,0.4672,0.0577,0.6976,0.0791,0.0848],["philosophy",0.4549,0.775,0.3637,0.2005,0.8039,0.0654,0.0476],["physics",0.9071,0.3133,0.9421,-0.0387,0.3669,0.2744,0.2465],["psychology",0.5055,0.6956,0.5085,-0.006,0.7314,0.0904,0.0768],["overall",0.6424,0.5874,0.3891,0.3942,0.779,0.1444,0.0606]]}};
+const $ = (id) => document.getElementById(id);
+
+/* Inline math used in several places: <span data-math="key"></span> is filled from M at load. */
+const HAT = (base, sub) => `<math><msub><mover accent="true">${base}<mo>&#x302;</mo></mover>${sub}</msub></math>`;
+const M = {
+    sar1h: HAT('<mi mathvariant="normal">SAR</mi>', '<mn>1</mn>'),
+    sarh: `<math><mover accent="true"><mi mathvariant="normal">SAR</mi><mo>&#x302;</mo></mover></math>`,
+    rho2h: HAT('<mi>&#x3C1;</mi>', '<mn>2</mn>'),
+    sar1: '<math><msub><mi mathvariant="normal">SAR</mi><mn>1</mn></msub></math>',
+    sar2: '<math><msub><mi mathvariant="normal">SAR</mi><mn>2</mn></msub></math>',
+    rho2: '<math><msub><mi>&#x3C1;</mi><mn>2</mn></msub></math>',
+};
+document.querySelectorAll('[data-math]').forEach((el) => { el.innerHTML = M[el.dataset.math]; });
+
+
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Fixed 1920x1080 stage; keyboard, wheel, swipe, buttons, #N deep links,
+   presenter notes (N), details drawer (D), help (?).
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.stage = $('deckStage');
+        this.current = 0; this.wheelLock = false; this.factor = 1;
+        this.initialHash = location.hash;   /* go() rewrites the hash; keep the original for &id=value state */
+        this.setupStageScale(); this.setupKeyboardNav(); this.setupWheelNav(); this.setupTouchNav();
+        $('prevBtn').addEventListener('click', () => this.go(this.current - 1));
+        $('nextBtn').addEventListener('click', () => this.go(this.current + 1));
+        $('notesBtn').addEventListener('click', () => this.toggleNotes());
+        $('helpBtn').addEventListener('click', () => $('helpPanel').classList.toggle('show'));
+        $('helpPanel').addEventListener('click', () => $('helpPanel').classList.remove('show'));
+        document.querySelectorAll('[data-details]').forEach((b) => b.addEventListener('click', () => this.toggleDrawer()));
+        /* deep links: #N = slide N; append d = open details, n = open notes (e.g. #5dn);
+           then &id=value sets a control after init (QA: #6&budget=0.4, #3&revealBtn=click) */
+        const hm = location.hash.match(/^#(\d+)([dn]*)/);
+        this.go(hm ? +hm[1] - 1 : 0);
+        if (hm && hm[2].includes('d')) this.toggleDrawer();
+        if (hm && hm[2].includes('n')) this.toggleNotes();
+        window.addEventListener('hashchange', () => { const k = parseInt(location.hash.slice(1), 10); if (Number.isFinite(k) && k - 1 !== this.current) this.go(k - 1); });
+    }
+    setupStageScale() {
+        /* the stage fits the space left of the walk-through panel when it is open */
+        const scale = () => {
+            const panel = $('notesPanel'), side = panel.classList.contains('show') ? panel.offsetWidth : 0;
+            const W = window.innerWidth - side, H = window.innerHeight;
+            const f = Math.min(W / 1920, H / 1080);
+            this.stage.style.transform = `translate(${(W - 1920 * f) / 2}px, ${(H - 1080 * f) / 2}px) scale(${f})`;
+            this.factor = f;
+        };
+        this.rescale = scale;
+        scale(); window.addEventListener('resize', scale);
+    }
+    isInteractive(el, withSvg) { return !!(el && el.closest && el.closest('input, button, select, textarea, [contenteditable="true"]' + (withSvg ? ', svg' : ''))); }
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (document.body.classList.contains('editing')) return;
+            const k = e.key;
+            if (k === 'Escape') { this.slides[this.current].classList.remove('drawer-open'); $('helpPanel').classList.remove('show'); return; }
+            if (e.target.closest && e.target.closest('input')) return;          /* sliders keep their arrow keys */
+            if (k === 'd' || k === 'D') { this.toggleDrawer(); return; }
+            if (k === 'n' || k === 'N') { this.toggleNotes(); return; }
+            if (k === '?') { $('helpPanel').classList.toggle('show'); return; }
+            if (e.target.closest && e.target.closest('button') && k === ' ') return; /* space activates buttons */
+            if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); this.go(this.current + 1); }
+            if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) { e.preventDefault(); this.go(this.current - 1); }
+            if (k === 'Home') this.go(0);
+            if (k === 'End') this.go(this.slides.length - 1);
+        });
+    }
+    setupWheelNav() {
+        window.addEventListener('wheel', (e) => {
+            if (this.wheelLock || Math.abs(e.deltaY) < 30 || this.isInteractive(e.target) || e.target.closest('#notesPanel, .drawer')) return;
+            this.wheelLock = true; this.go(this.current + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => { this.wheelLock = false; }, 800);
+        }, { passive: true });
+    }
+    setupTouchNav() {
+        let x0 = null, y0 = null;
+        window.addEventListener('touchstart', (e) => {
+            if (this.isInteractive(e.target, true) || e.target.closest('.drawer, #notesPanel')) { x0 = null; return; }
+            x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+        }, { passive: true });
+        window.addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+            if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) this.go(this.current + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+    applyHashState() {
+        (this.initialHash.match(/&[\w-]+=[^&]*/g) || []).forEach((kv) => {
+            const [id, val] = kv.slice(1).split('='), el = $(id);
+            if (!el) return;
+            if (val === 'click') el.click(); else { el.value = decodeURIComponent(val); el.dispatchEvent(new Event('input')); }
+        });
+    }
+    toggleDrawer() { const s = this.slides[this.current]; if (s.querySelector('.drawer')) s.classList.toggle('drawer-open'); }
+    toggleNotes() {
+        const on = $('notesPanel').classList.toggle('show');
+        document.body.classList.toggle('notes-on', on);
+        document.body.classList.toggle('track', on);   /* numbered badges follow the notes */
+        this.rescale();
+    }
+    go(i) {
+        this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, k) => {
+            const on = k === this.current;
+            s.classList.toggle('active', on); s.classList.toggle('visible', on);
+            if (!on) s.classList.remove('drawer-open');
+            s.setAttribute('aria-hidden', on ? 'false' : 'true');
+        });
+        const n = String(this.slides.length).padStart(2, '0');
+        $('counter').textContent = `${String(this.current + 1).padStart(2, '0')} / ${n}`;
+        $('progress').style.width = `${(100 * (this.current + 1)) / this.slides.length}%`;
+        const notes = this.slides[this.current].querySelector('aside.notes');
+        $('notesPanel').innerHTML = `<h4>${String(this.current + 1).padStart(2, '0')} · ${this.slides[this.current].dataset.title}</h4>` + (notes ? notes.innerHTML : '');
+        try { history.replaceState(null, '', `#${this.current + 1}`); } catch (e) { /* file:// sandbox */ }
+    }
+}
+
+/* ===========================================
+   SLIDE 1 — THE PROBLEM (paper Figure 9, Table 22)
+   g = logit(she) − logit(he) for "After Emily went to the store,"; exact removals of
+   every single feature and every pair of the 16 most active SAE features (Llama-3.1 8B, layer 21).
+   =========================================== */
+const CASE = DATA.case, KF = CASE.singles.length;
+const p1 = { pair: CASE.pair.slice() };
+const addPred = (i, j) => CASE.singles[i] + CASE.singles[j] - CASE.g_full;
+const pairVal = (i, j) => CASE.pairs[`${i}-${j}`];
+const gapOf = (i, j) => pairVal(i, j) - addPred(i, j);
+function initP1() {
+    let maxAbs = 0;
+    for (let i = 0; i < KF; i++) for (let j = i + 1; j < KF; j++) maxAbs = Math.max(maxAbs, Math.abs(gapOf(i, j)));
+    let h = '<span class="lab"></span>';
+    for (let j = 1; j < KF; j++) h += `<span class="lab">${j + 1}</span>`;
+    for (let i = 0; i < KF - 1; i++) {
+        h += `<span class="lab">${i + 1}</span>`;
+        for (let j = 1; j < KF; j++) {
+            if (j <= i) { h += '<span></span>'; continue; }
+            const v = gapOf(i, j), a = Math.round(100 * Math.min(1, Math.abs(v) / maxAbs));
+            const bg = `color-mix(in srgb, ${v < 0 ? 'var(--pos-light)' : 'var(--neg-light)'} ${a}%, #E3DDD0)`;
+            h += `<button class="pcell" id="pr${i}_${j}" data-i="${i}" data-j="${j}" style="background:${bg}" aria-pressed="false" title="Features ${i + 1} and ${j + 1}"></button>`;
+        }
+    }
+    $('pairGrid').innerHTML = h;
+    $('pairGrid').querySelectorAll('.pcell').forEach((b) => b.addEventListener('click', () => { p1.pair = [+b.dataset.i, +b.dataset.j]; renderP1(); }));
+    renderP1();
+}
+function renderP1() {
+    const [i, j] = p1.pair, pred = addPred(i, j), act = pairVal(i, j);
+    $('pairGrid').querySelectorAll('.pcell').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.i === i && +b.dataset.j === j));
+    $('p1Pair').textContent = `Removing features ${i + 1} and ${j + 1}`;
+    $('p1Pred').textContent = pred.toFixed(2);
+    $('p1Act').textContent = act.toFixed(2);
+    const rows = [['All 16 kept', CASE.g_full, '#9A9485'], [`Remove ${i + 1}`, CASE.singles[i], '#C3BCAD'],
+        [`Remove ${j + 1}`, CASE.singles[j], '#C3BCAD'], ['Sum predicts', pred, 'var(--gold-deep)'], ['Model', act, 'var(--pos-light)']];
+    const L = 210, R = 540, rowH = 78, lo = Math.min(0, ...rows.map((r) => r[1])), hi = Math.max(5, ...rows.map((r) => r[1])) + 0.3;
+    const x = (v) => L + ((v - lo) / (hi - lo)) * (R - L);
+    let s = `<line x1="${x(0)}" x2="${x(0)}" y1="0" y2="${rowH * 5 - 6}" stroke="var(--ink)" stroke-width="1.2"/>`;
+    rows.forEach(([lab, v, col], k) => {
+        const y = k * rowH + 8;
+        s += `<text x="${L - 14}" y="${y + 30}" text-anchor="end" font-family="var(--sans)" font-size="18" fill="var(--ink)">${lab}</text>`;
+        s += `<rect x="${Math.min(x(0), x(v))}" y="${y}" width="${Math.max(2, Math.abs(x(v) - x(0)))}" height="46" fill="${col}"/>`;
+        s += `<text x="${x(Math.max(v, 0)) + 10}" y="${y + 30}" font-family="var(--mono)" font-size="17" fill="var(--ink)">${v.toFixed(2)}</text>`;
+    });
+    $('p1Bars').innerHTML = s;
+}
+
+/* ===========================================
+   SLIDE 2 — SAR on a toy game over all 16 subsets of four features
+   g = A + 0.5B + C + 0.4D − AC + ABD. Exact projections via the Walsh basis (uniform subsets),
+   i.e. the paper's SAR_r with p = 1/2 and no sampling, so no hats.
+   =========================================== */
+const TOYF = ['A', 'B', 'C', 'D'];
+const toyG = (s) => s[0] + 0.5 * s[1] + s[2] + 0.4 * s[3] - s[0] * s[2] + s[0] * s[1] * s[3];
+const SUBS = [];
+for (let m = 15; m >= 0; m--) SUBS.push([3, 2, 1, 0].map((b) => (m >> b) & 1));
+SUBS.sort((a, b) => b.reduce((p, q) => p + q, 0) - a.reduce((p, q) => p + q, 0));
+const TOY = (() => {
+    const g = SUBS.map(toyG), chi = (s, B) => B.reduce((p, f) => p * (2 * s[f] - 1), 1);
+    const Bs = [];
+    for (let m = 0; m < 16; m++) Bs.push([0, 1, 2, 3].filter((f) => (m >> f) & 1));
+    const c = Bs.map((B) => g.reduce((acc, v, k) => acc + v * chi(SUBS[k], B), 0) / 16);
+    const pred = (r) => SUBS.map((s) => Bs.reduce((acc, B, k) => acc + (B.length <= r ? c[k] * chi(s, B) : 0), 0));
+    const V = Bs.reduce((acc, B, k) => acc + (B.length ? c[k] * c[k] : 0), 0);
+    const above = (r) => Bs.reduce((acc, B, k) => acc + (B.length > r ? c[k] * c[k] : 0), 0) / V;
+    let best = null, bv = -1;
+    Bs.forEach((B, k) => { if (B.length === 2 && Math.abs(c[k]) > bv) { bv = Math.abs(c[k]); best = B; } });
+    return { g, p1: pred(1), p2: pred(2), sar1: above(1), sar2: above(2), pair: best };
+})();
+const sel2 = { revealed: false, guesses: new Set(), model: 'first' };
+function buildToy() {
+    let h = '<thead><tr>';
+    TOYF.forEach((f, k) => { h += `<th><button class="fh" data-f="${k}" aria-pressed="false">${f}<span class="mk"></span></button></th>`; });
+    h += '<th>Behavior</th><th class="ph" data-say="3">Prediction</th><th class="ph">Residual</th></tr></thead><tbody>';
+    SUBS.forEach((s, r) => {
+        h += '<tr>' + s.map((on, k) => `<td class="k${on ? ' on' : ''}" data-f="${k}" data-r="${r}">${on ? '●' : '·'}</td>`).join('');
+        h += `<td class="gv">${TOY.g[r].toFixed(2)}</td><td class="pv" id="pv${r}"></td><td class="miss"><span class="mz"></span><span class="mb" id="mb${r}"></span><span class="mt" id="mt${r}"></span></td></tr>`;
+    });
+    $('coalTable').innerHTML = h + '</tbody>';
+    document.querySelectorAll('.fh').forEach((b) => b.addEventListener('click', () => {
+        if (sel2.revealed) return;
+        const f = +b.dataset.f;
+        if (sel2.guesses.has(f)) sel2.guesses.delete(f); else if (sel2.guesses.size < 2) sel2.guesses.add(f);
+        update2();
+    }));
+    $('modelSeg').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { if (!sel2.revealed) return; sel2.model = b.dataset.m; update2(); }));
+}
+function update2() {
+    const pair = TOY.pair, isPair = sel2.model === 'pair', pred = isPair ? TOY.p2 : TOY.p1;
+    const maxMiss = Math.max(...TOY.g.map((v, r) => Math.abs(v - TOY.p1[r])));
+    $('coalTable').classList.toggle('hide-pred', !sel2.revealed);
+    SUBS.forEach((s, r) => {
+        const miss = TOY.g[r] - pred[r], w = (Math.abs(miss) / maxMiss) * 135;
+        $(`pv${r}`).textContent = pred[r].toFixed(2);
+        const mb = $(`mb${r}`);
+        mb.style.width = `${w}px`; mb.style.left = `${miss < 0 ? 140 - w : 140}px`;
+        $(`mt${r}`).textContent = Math.abs(miss) < 0.005 ? '0' : (miss > 0 ? '+' : '−') + Math.abs(miss).toFixed(2);
+    });
+    document.querySelectorAll('#coalTable td.k').forEach((td) => {
+        const s = SUBS[+td.dataset.r], f = +td.dataset.f;
+        td.classList.toggle('pairhit', sel2.revealed && pair.includes(f) && s[pair[0]] && s[pair[1]]);
+    });
+    document.querySelectorAll('.fh').forEach((b) => {
+        const f = +b.dataset.f, g = sel2.guesses.has(f), inPair = sel2.revealed && pair.includes(f);
+        b.classList.toggle('guessed', g && !inPair); b.classList.toggle('keep', inPair); b.setAttribute('aria-pressed', g);
+        b.disabled = sel2.revealed;   /* guessing ends at the reveal */
+        const mk = b.querySelector('.mk');
+        if (sel2.revealed && g) { mk.textContent = pair.includes(f) ? '✓' : '✕'; mk.className = 'mk ' + (pair.includes(f) ? 'ok' : 'no'); } else { mk.textContent = ''; mk.className = 'mk'; }
+    });
+    $('modelBox').hidden = !sel2.revealed;   /* the model switch appears only when it can be used */
+    $('modelSeg').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === sel2.model));
+    $('modelDesc').textContent = isPair
+        ? 'One more coefficient for each pair of kept features.'
+        : 'One coefficient per feature. A subset is predicted by adding the coefficients of the features it keeps.';
+    $('revealBtn').disabled = sel2.revealed;
+    const bar = $('vbar').children;
+    if (!sel2.revealed) {
+        $('taskText').textContent = 'Four toy features and all 16 subsets. Which pair does not add up? Click two column headers or press Reveal.';
+        $('sarVal').textContent = '?'; $('rhoText').textContent = '';
+        [0, 0, 0].forEach((w, k) => { bar[k].style.width = '0%'; });
+        return;
+    }
+    const hits = [...sel2.guesses].filter((f) => pair.includes(f)).length;
+    $('taskText').textContent = (sel2.guesses.size ? `You found ${hits} of 2. ` : '') + `The pair is ${TOYF[pair[0]]} and ${TOYF[pair[1]]}. Switch between first order and pairwise.`;
+    $('sarVal').innerHTML = isPair ? `${M.sar2} = ${TOY.sar2.toFixed(2)}` : `${M.sar1} = ${TOY.sar1.toFixed(2)}`;
+    const w = isPair ? [1 - TOY.sar1, TOY.sar1 - TOY.sar2, TOY.sar2] : [1 - TOY.sar1, 0, TOY.sar1];
+    w.forEach((v, k) => { bar[k].style.width = `${v * 100}%`; });
+    const rho = (TOY.sar1 - TOY.sar2) / TOY.sar1;
+    $('rhoText').innerHTML = `<math><msub><mi>&#x3C1;</mi><mn>2</mn></msub><mo>=</mo><msub><mi>&#x394;</mi><mn>2</mn></msub><mo>/</mo><msub><mi mathvariant="normal">SAR</mi><mn>1</mn></msub><mo>=</mo><mn>${rho.toFixed(2)}</mn></math>. Pairs recover ${Math.round(rho * 100)}% of the first order residual.`;
+}
+$('revealBtn').addEventListener('click', () => { sel2.revealed = true; sel2.model = 'first'; update2(); });
+$('resetBtn').addEventListener('click', () => { sel2.revealed = false; sel2.guesses.clear(); sel2.model = 'first'; update2(); });
+
+/* ===========================================
+   SLIDE 3 — COORDINATES (paper Figure 3, Table 10): per-prompt first order residual, SAE vs rotated
+   points: [model, behavior, SAE, median over 8 rotations]; cells: [model, behavior, SAE median, rotated median, share lower]
+   =========================================== */
+const RMODELS = ['Gemma-3 4B', 'Mistral-7B', 'Llama-3.1 8B'];
+const RBEHAV = ['simple copying', 'subject verb agreement', 'gendered pronoun', 'CounterFact', 'IOI', 'greater than'];
+let rotFocus = null;
+function drawRot() {
+    const svg = $('rotSvg'), L = 110, R = 1130, T = 10, B = 480, lo = Math.log10(0.003), hi = 0;
+    const sx = (v) => L + ((Math.log10(Math.max(v, 0.003)) - lo) / (hi - lo)) * (R - L);
+    const sy = (v) => B - ((Math.log10(Math.max(v, 0.003)) - lo) / (hi - lo)) * (B - T);
+    let s = `<path d="M ${sx(0.003)} ${sy(0.003)} L ${sx(1)} ${sy(1)} L ${sx(1)} ${B} Z" fill="rgba(156,124,67,0.07)"/>`;
+    [0.003, 0.01, 0.03, 0.1, 0.3, 1].forEach((t) => {
+        s += `<line x1="${sx(t)}" x2="${sx(t)}" y1="${T}" y2="${B}" stroke="var(--border-light)"/><line x1="${L}" x2="${R}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--border-light)"/>`;
+        s += `<text x="${sx(t)}" y="${B + 26}" text-anchor="middle" font-family="var(--mono)" font-size="15" fill="var(--text-muted-light)">${t}</text>`;
+        s += `<text x="${L - 12}" y="${sy(t) + 5}" text-anchor="end" font-family="var(--mono)" font-size="15" fill="var(--text-muted-light)">${t}</text>`;
+    });
+    s += `<line x1="${sx(0.003)}" y1="${sy(0.003)}" x2="${sx(1)}" y2="${sy(1)}" stroke="var(--ink)" stroke-dasharray="6 6" stroke-width="1.3"/>`;
+    s += `<text x="${sx(0.62)}" y="${sy(0.62) - 10}" text-anchor="end" font-family="var(--sans)" font-size="15" fill="var(--text-muted-light)">Equal</text>`;
+    s += `<text x="${R - 12}" y="${B - 16}" text-anchor="end" font-family="var(--sans)" font-size="16" fill="var(--gold-deep)">Below the line, SAE coordinates have the lower residual</text>`;
+    s += `<text x="${(L + R) / 2}" y="${B + 58}" text-anchor="middle" font-family="var(--sans)" font-size="18" fill="var(--text-muted-light)">First order residual after random rotation, median of 8</text>`;
+    s += `<text transform="translate(28 ${(T + B) / 2}) rotate(-90)" text-anchor="middle" font-family="var(--sans)" font-size="18" fill="var(--text-muted-light)">First order residual in SAE coordinates</text>`;
+    const op = (m, base) => (rotFocus === null ? base : rotFocus === m ? Math.min(1, base * 3.2) : 0.04);
+    DATA.rotation.points.forEach(([m, b, v, r]) => {
+        s += `<circle cx="${sx(r).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="4.5" fill="var(--ink)" opacity="${op(m, 0.24)}" data-tip="${RMODELS[m]}, ${RBEHAV[b]}, SAE ${v.toFixed(3)}, rotation ${r.toFixed(3)}"/>`;
+    });
+    DATA.rotation.cells.forEach(([m, b, v, r, frac]) => {
+        const x = sx(r), y = sy(v), d = 11;
+        s += `<path d="M ${x} ${y - d} L ${x + d} ${y} L ${x} ${y + d} L ${x - d} ${y} Z" fill="var(--gold)" stroke="var(--ink)" stroke-width="1.5" opacity="${rotFocus === null || rotFocus === m ? 1 : 0.12}" data-tip="${RMODELS[m]}, ${RBEHAV[b]}, median SAE ${v.toFixed(4)}, rotation ${r.toFixed(4)}"/>`;
+    });
+    svg.innerHTML = s;
+    const tip = $('tip');
+    svg.querySelectorAll('[data-tip]').forEach((el) => {
+        el.addEventListener('mouseenter', () => { tip.textContent = el.dataset.tip; tip.style.opacity = 1; });
+        el.addEventListener('mousemove', (e) => { const box = svg.parentElement.getBoundingClientRect(), f = deck.factor || 1; tip.style.left = `${(e.clientX - box.left) / f + 16}px`; tip.style.top = `${(e.clientY - box.top) / f - 44}px`; });
+        el.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+    });
+}
+function initRot() {
+    const box = $('rotChips');
+    box.innerHTML = '<button class="chip" id="rotAll" aria-pressed="true" data-m="">All</button>' + RMODELS.map((n, k) => `<button class="chip" id="rot${k}" aria-pressed="false" data-m="${k}">${n}</button>`).join('');
+    box.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => {
+        rotFocus = b.dataset.m === '' ? null : +b.dataset.m; box.querySelectorAll('.chip').forEach((u) => u.setAttribute('aria-pressed', u === b)); drawRot();
+    }));
+    $('rotTable').innerHTML = RBEHAV.map((bn, b) => `<tr><td>${bn}</td>` + [0, 1, 2].map((m) => { const c = DATA.rotation.cells.find((x) => x[0] === m && x[1] === b); return `<td>${c[2].toFixed(3)}/${c[3].toFixed(3)}</td>`; }).join('') + '</tr>').join('');
+    drawRot();
+}
+
+/* ===========================================
+   SLIDE 4 — PAIRS: the Emily prompt's 128 held out subsets (trace from the paper's run)
+   held: [actual g, first order, pairwise, random third order control (median of 50)]
+   =========================================== */
+const fitm = { m: 1 };
+const FIT = { L: 74, R: 840, T: 22, B: 450, lo: -1.5, hi: 6.5 };
+const fx = (v) => FIT.L + ((v - FIT.lo) / (FIT.hi - FIT.lo)) * (FIT.R - FIT.L);
+const fy = (v) => FIT.B - ((v - FIT.lo) / (FIT.hi - FIT.lo)) * (FIT.B - FIT.T);
+function initFit() {
+    let s = '';
+    for (let t = -1; t <= 6; t++) {
+        s += `<line x1="${FIT.L}" x2="${FIT.R}" y1="${fy(t)}" y2="${fy(t)}" stroke="var(--border-dark)"/><text x="${FIT.L - 12}" y="${fy(t) + 5}" text-anchor="end" font-family="var(--mono)" font-size="14" fill="var(--text-muted-dark)">${t}</text>`;
+        s += `<text x="${fx(t)}" y="${FIT.B + 26}" text-anchor="middle" font-family="var(--mono)" font-size="14" fill="var(--text-muted-dark)">${t}</text>`;
+    }
+    s += `<line x1="${fx(FIT.lo)}" y1="${fy(FIT.lo)}" x2="${fx(FIT.hi)}" y2="${fy(FIT.hi)}" stroke="var(--text-warm)" stroke-dasharray="6 6" stroke-width="1.3"/>`;
+    s += `<text x="${fx(6.4)}" y="${fy(6.4) - 12}" text-anchor="end" font-family="var(--sans)" font-size="15" fill="var(--text-muted-dark)">Perfect prediction</text>`;
+    s += `<text x="${(FIT.L + FIT.R) / 2}" y="${FIT.B + 58}" text-anchor="middle" font-family="var(--sans)" font-size="17" fill="var(--text-muted-dark)">Prediction</text>`;
+    s += `<text transform="translate(18 ${(FIT.T + FIT.B) / 2}) rotate(-90)" text-anchor="middle" font-family="var(--sans)" font-size="17" fill="var(--text-muted-dark)">Model output</text>`;
+    CASE.held.forEach((h, k) => { s += `<rect class="fres" id="fr${k}" width="5" fill="var(--pos-dark)" fill-opacity="0.55"/>`; });
+    CASE.held.forEach((h, k) => { s += `<circle class="fpt" id="fp${k}" cx="${fx(h[1]).toFixed(1)}" cy="${fy(h[0]).toFixed(1)}" r="7.5" fill="var(--gold)" fill-opacity="0.8"/>`; });
+    $('fitSvg').innerHTML = s;
+    $('fitSeg').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { fitm.m = +b.dataset.m; updateFit(); }));
+    const R3 = CASE.metrics.rank3_range;
+    $('randRange').textContent = `${R3[0].toFixed(3)} to ${R3[1].toFixed(3)}`;
+    updateFit();
+}
+function updateFit() {
+    CASE.held.forEach((h, k) => {   /* point at (prediction, model output); red bar = its residual, up or down to the diagonal */
+        const x = fx(h[fitm.m]), ya = fy(h[0]), yp = fy(h[fitm.m]), r = $(`fr${k}`);
+        $(`fp${k}`).style.cx = `${x.toFixed(1)}px`;
+        r.style.x = `${(x - 2.5).toFixed(1)}px`; r.style.y = `${Math.min(ya, yp).toFixed(1)}px`; r.style.height = `${Math.abs(ya - yp).toFixed(1)}px`;
+    });
+    const Mt = CASE.metrics;
+    $('fitSeg').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.m === fitm.m));
+    $('fitVerdict').innerHTML = fitm.m === 1
+        ? `Rank fidelity <b>${Mt.rank1.toFixed(3)}</b>. For this prompt ${M.sar1h} = ${Mt.sar1.toFixed(3)}.`
+        : fitm.m === 2
+        ? `Rank fidelity <b>${Mt.rank2.toFixed(3)}</b>. ${M.rho2h} = ${Mt.rho2.toFixed(3)}, so pairs recover ${Math.round(Mt.rho2 * 100)}% of the residual.`
+        : `Rank fidelity <b class="neg">${Mt.rank3.toFixed(3)}</b> with 120 random third order terms in place of the pairs.`;
+}
+
+/* ===========================================
+   SLIDE 5 — STEERING: MMLU-Pro (paper Table 1; Tables 20 and 21 in the drawer)
+   held: [actual accuracy, first order prediction, pairwise prediction] for the 512 held out combinations
+   domains: [name, SAR_1, rank_1, SAR_2, rho_2, rank_2, E_1, E_2]
+   =========================================== */
+const ST = DATA.steer, OV = ST.domains.find((d) => d[0] === 'overall');
+const st = { m: 1 };
+const SP = (() => {
+    const all = ST.held.flat(), lo = Math.min(...all) - 0.001, hi = Math.max(...all) + 0.001;
+    return { L: 96, R: 1030, T: 20, B: 480, lo, hi };
+})();
+const sxs = (v) => SP.L + ((v - SP.lo) / (SP.hi - SP.lo)) * (SP.R - SP.L);
+const sys = (v) => SP.B - ((v - SP.lo) / (SP.hi - SP.lo)) * (SP.B - SP.T);
+function initSteer() {
+    let s = '';
+    for (let t = Math.ceil(SP.lo * 200) / 200; t <= SP.hi; t += 0.005) {
+        s += `<line x1="${SP.L}" x2="${SP.R}" y1="${sys(t)}" y2="${sys(t)}" stroke="var(--border-light)"/><text x="${SP.L - 12}" y="${sys(t) + 5}" text-anchor="end" font-family="var(--mono)" font-size="14" fill="var(--text-muted-light)">${(t * 100).toFixed(1)}</text>`;
+        s += `<text x="${sxs(t)}" y="${SP.B + 26}" text-anchor="middle" font-family="var(--mono)" font-size="14" fill="var(--text-muted-light)">${(t * 100).toFixed(1)}</text>`;
+    }
+    s += `<line x1="${sxs(SP.lo)}" y1="${sys(SP.lo)}" x2="${sxs(SP.hi)}" y2="${sys(SP.hi)}" stroke="var(--ink)" stroke-dasharray="6 6" stroke-width="1.3"/>`;
+    s += `<text x="${sxs(SP.hi) - 4}" y="${sys(SP.hi) - 10}" text-anchor="end" font-family="var(--sans)" font-size="15" fill="var(--text-muted-light)">Perfect prediction</text>`;
+    s += `<text x="${(SP.L + SP.R) / 2}" y="${SP.B + 58}" text-anchor="middle" font-family="var(--sans)" font-size="17" fill="var(--text-muted-light)">Predicted accuracy in percent</text>`;
+    s += `<text transform="translate(22 ${(SP.T + SP.B) / 2}) rotate(-90)" text-anchor="middle" font-family="var(--sans)" font-size="17" fill="var(--text-muted-light)">Accuracy in percent</text>`;
+    ST.held.forEach((h, k) => { s += `<circle class="spt" id="sp${k}" cx="${sxs(h[1]).toFixed(1)}" cy="${sys(h[0]).toFixed(1)}" r="5" fill="var(--ink)" fill-opacity="0.42"/>`; });
+    $('steerSvg').innerHTML = s;
+    $('steerSeg').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { st.m = +b.dataset.m; updateSteer(); }));
+    const val = { rank: [OV[2], OV[5]], E: [OV[6], OV[7]], sar: [OV[1], OV[3]] };
+    document.querySelectorAll('.mbar').forEach((row) => {
+        const v = val[row.dataset.k], x = v[+row.dataset.m - 1], top = row.dataset.k === 'rank' ? 1 : Math.max(...v) * 1.15;
+        row.querySelector('.bf').style.width = `${(x / top) * 100}%`;
+        row.querySelector('.bv').textContent = x.toFixed(4);
+    });
+    $('steerTable').innerHTML = ST.domains.map((d) => `<tr${d[0] === 'overall' ? ' style="font-weight:600"' : ''}><td>${d[0].replace(/\b\w/g, (c) => c.toUpperCase())}</td><td>${d[1].toFixed(4)}</td><td>${d[2].toFixed(4)}</td><td>${d[5].toFixed(4)}</td></tr>`).join('');
+    updateSteer();
+}
+function updateSteer() {
+    ST.held.forEach((h, k) => { $(`sp${k}`).style.cx = `${sxs(h[st.m]).toFixed(1)}px`; });
+    $('steerSeg').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.m === st.m));
+    document.querySelectorAll('.mbar').forEach((row) => row.classList.toggle('on', +row.dataset.m === st.m));
+}
+
+
+/* Section links (chrome roadmap and cover route): go to the slide named in data-go. */
+document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => deck.go(+b.dataset.go - 1)));
+
+/* ===========================================
+   INLINE EDITING — disabled in this public copy
+   =========================================== */
+class Editor {
+    constructor() { this.isActive = false; }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        document.querySelectorAll('[data-editable]').forEach((el) => el.setAttribute('contenteditable', this.isActive));
+        $('editToggle').classList.toggle('active', this.isActive);
+    }
+    save() {
+        const was = this.isActive; if (was) this.toggleEditMode();
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML; if (was) this.toggleEditMode();
+    }
+}
+const editor = new Editor();
+(() => {
+    const hot = $('editHotzone'), btn = $('editToggle'); let hideT = null;
+    btn.addEventListener('click', () => editor.toggleEditMode()); hot.addEventListener('click', () => editor.toggleEditMode());
+    const show = () => { clearTimeout(hideT); btn.classList.add('show'); };
+    const hide = () => { hideT = setTimeout(() => { if (!editor.isActive) btn.classList.remove('show'); }, 400); };
+    hot.addEventListener('mouseenter', show); hot.addEventListener('mouseleave', hide); btn.addEventListener('mouseenter', show); btn.addEventListener('mouseleave', hide);
+    document.addEventListener('keydown', (e) => {
+    });
+})();
+
+/* === CONTROLS AUTO-HIDE === */
+(() => {
+    const nav = document.querySelector('.deck-controls'); let t = null;
+    const wake = () => { nav.classList.remove('idle'); clearTimeout(t); t = setTimeout(() => nav.classList.add('idle'), 2600); };
+    ['mousemove', 'touchstart', 'keydown'].forEach((ev) => window.addEventListener(ev, wake, { passive: true })); wake();
+})();
+
+/* === INIT === */
+const deck = new SlidePresentation();
+initP1(); buildToy(); update2(); initRot(); initFit(); initSteer(); deck.applyHashState();
+</script>
+</body>
+</html>

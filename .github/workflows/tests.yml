@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sar:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python: "3.10"
+            numpy: "numpy==1.24.4"    # oldest version allowed by requirements.txt
+          - python: "3.12"
+            numpy: "numpy"            # newest release
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install "${{ matrix.numpy }}" pytest
+      - run: python -m pytest -q

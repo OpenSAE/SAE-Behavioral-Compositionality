@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+/demo_layers*.png
+.pytest_cache/
+.venv/

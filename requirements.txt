@@ -1,0 +1,5 @@
+numpy>=1.24
+matplotlib>=3.7
+torch>=2.1
+transformer-lens>=2.0
+sae-lens>=6.0
