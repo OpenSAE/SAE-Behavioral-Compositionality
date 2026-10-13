@@ -162,6 +162,8 @@ python demo.py
 <details>
 <summary>🧠 Figure 2. 行为组合性随行为和表示而变化</summary>
 
+<br>
+
 每种组合 1,000 个 prompt 的 $`\widehat{\mathrm{SAR}}_1`$ 中位数。
 
 | | 简单复制 | 主谓一致 | 性别代词 | CounterFact | IOI | 大于比较 |
@@ -176,6 +178,8 @@ $`\widehat{\mathrm{SAR}}_1`$ 在全部 57 个模型、层和行为组合中都�
 
 <details>
 <summary>🧭 Figure 3. 组合性取决于坐标的选择</summary>
+
+<br>
 
 SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100 个 prompt，每个 prompt 8 个旋转。
 
@@ -192,12 +196,16 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 <details>
 <summary>📉 Figure 4. 估计的 SAR 与一阶解释的保真度相关</summary>
 
+<br>
+
 从 $`\widehat{\mathrm{SAR}}_1`$ 最低的十分位到最高的十分位，一阶排序保真度在 Gemma-3 4B 上从 0.9857 降到 0.9539，在 Mistral-7B 上从 0.9939 降到 0.9413，在 Llama-3.1 8B 上从 0.9790 降到 0.9289。选择遗憾在 Gemma 和 Llama 上约翻一倍，在 Mistral 上约增加到五倍。
 
 </details>
 
 <details>
 <summary>🤝 Figure 5. 特征对补回缺失的组合结构</summary>
+
+<br>
 
 | 18 个设置的平均 | 一阶 | 成对 |
 |---|:---:|:---:|
@@ -210,6 +218,8 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 
 <details>
 <summary>🪜 Figures 6 and 7. 估计的组合性随深度变化</summary>
+
+<br>
 
 简单复制在最早和最晚采样层上的结果。
 
@@ -225,6 +235,8 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 <details>
 <summary>🎛️ Table 1. 成对建模更好地预测组合 steering 的结果</summary>
 
+<br>
+
 Llama-3.1 8B 上 16 个已发表的 CorrSteer 特征，1,024 种 steering 组合，1,400 道 MMLU-Pro 题。
 
 | 近似 | 残差估计 | 排序保真度 | 排序错误 |
@@ -236,6 +248,8 @@ Llama-3.1 8B 上 16 个已发表的 CorrSteer 特征，1,024 种 steering 组合
 
 <details>
 <summary>🔬 Table 2 and Figure 8. 重建质量与 SAR 在可比的 SAE 上表现不同</summary>
+
+<br>
 
 Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，每种行为 1,800 个 prompt。
 
@@ -302,6 +316,8 @@ Layer     first pairwise     first pairwise     first pairwise     first pairwis
 
 <details>
 <summary>展开所有图</summary>
+
+<br>
 
 | | |
 |---|---|

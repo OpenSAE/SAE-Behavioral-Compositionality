@@ -198,6 +198,8 @@ python demo.py
 <details>
 <summary>🧠 Figure 2. Behavioral compositionality varies across behaviors and representations</summary>
 
+<br>
+
 Prompt median $`\widehat{\mathrm{SAR}}_1`$ with 1,000 prompts for each combination.
 
 | | Simple copying | Subject verb agreement | Gendered pronoun | CounterFact | IOI | Greater than |
@@ -213,6 +215,8 @@ numerical zero. Its size depends on both the behavior and the model.
 
 <details>
 <summary>🧭 Figure 3. Compositionality depends on coordinate choice</summary>
+
+<br>
 
 Median $`\widehat{\mathrm{SAR}}_1`$ for SAE coordinates and for random rotations, with 100 prompts and eight rotations
 per prompt.
@@ -231,6 +235,8 @@ change, and the SAE coordinates have the lower residual in all 18 settings.
 <details>
 <summary>📉 Figure 4. Estimated SAR is associated with first order coalition fidelity</summary>
 
+<br>
+
 From the lowest to the highest $`\widehat{\mathrm{SAR}}_1`$ decile, first order rank fidelity falls from 0.9857 to 0.9539
 in Gemma-3 4B, from 0.9939 to 0.9413 in Mistral-7B, and from 0.9790 to 0.9289 in Llama-3.1 8B. Selection regret
 roughly doubles in Gemma and Llama and grows about fivefold in Mistral.
@@ -239,6 +245,8 @@ roughly doubles in Gemma and Llama and grows about fivefold in Mistral.
 
 <details>
 <summary>🤝 Figure 5. Feature pairs recover missing coalition structure</summary>
+
+<br>
 
 | Average over 18 settings | First order | Pairwise |
 |---|:---:|:---:|
@@ -252,6 +260,8 @@ splits of the subsets.
 
 <details>
 <summary>🪜 Figures 6 and 7. Estimated compositionality varies across depth</summary>
+
+<br>
 
 Simple copying at the earliest and latest sampled layers.
 
@@ -269,6 +279,8 @@ and layer comparisons.
 <details>
 <summary>🎛️ Table 1. Pairwise modeling better predicts the aggregate steering response</summary>
 
+<br>
+
 Sixteen published CorrSteer features in Llama-3.1 8B, 1,024 steering combinations, and 1,400 MMLU-Pro questions.
 
 | Approximation | Residual estimate | Rank fidelity | Ordering error |
@@ -280,6 +292,8 @@ Sixteen published CorrSteer features in Llama-3.1 8B, 1,024 steering combination
 
 <details>
 <summary>🔬 Table 2 and Figure 8. Reconstruction quality and SAR differ in a matched SAE comparison</summary>
+
+<br>
 
 Prompt level Spearman correlations pooled over six SAEs at Gemma-3 1B layer 17, with 1,800 prompts per behavior.
 
@@ -355,6 +369,8 @@ Captions are taken from the paper.
 
 <details>
 <summary>Show all figures</summary>
+
+<br>
 
 | | |
 |---|---|
