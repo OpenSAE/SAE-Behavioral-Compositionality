@@ -1,8 +1,13 @@
 """SAR demo: GPT-2 Small + a public SAE, 24 copying prompts, K = 16 features, 384 coalitions per prompt.
 
-python demo.py                       # layers 4 and 10
-python demo.py --layers 4 6 8 10     # all paper layers for GPT-2 Small
+python demo/demo.py                       # layers 4 and 10
+python demo/demo.py --layers 4 6 8 10     # all paper layers for GPT-2 Small
 """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import argparse
 import warnings
 

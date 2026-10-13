@@ -203,12 +203,12 @@ g = np.array([behavior(x) for x in h_tilde])     # 跑完上层，读出一个�
 r = sar(g, masks, fit, held)
 ```
 
-在 [`demo.py`](demo.py) 里这两步就是 `top_contributions` 和 `behavior`，换模型、换 SAE 或换行为时只需要替换这两个函数。旋转坐标用 `rotation(K)` 得到随机的 $`Q`$，贡献换成 `Q.T @ delta`。
+在 [`demo/demo.py`](demo/demo.py) 里这两步就是 `top_contributions` 和 `behavior`，换模型、换 SAE 或换行为时只需要替换这两个函数。旋转坐标用 `rotation(K)` 得到随机的 $`Q`$，贡献换成 `Q.T @ delta`。
 
 👉 在 GPT-2 Small 上运行
 
 ```bash
-python demo.py
+python demo/demo.py
 ```
 
 ---
@@ -321,10 +321,10 @@ Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，
 
 ## 🧪 Demo
 
-`demo.py` 用 GPT-2 Small 和它的公开 SAE，在我们写的 24 个复制型 prompt 上运行，例如 "Alice Emma Alice"。模型应当接着输出 " Emma"，行为是 " Emma" 的 logit 减去另一个名字的 logit。对每个 prompt，demo 保留激活最强的 16 个特征，抽 384 个子集，并把 SAE 坐标与 8 个随机旋转比较。`python demo.py` 跑第 4 和第 10 层，GPU 上约一分钟，CPU 上约五分钟。加上 `--layers 4 6 8 10` 会跑论文用到的全部四层。
+`demo/demo.py` 用 GPT-2 Small 和它的公开 SAE，在我们写的 24 个复制型 prompt 上运行，例如 "Alice Emma Alice"。模型应当接着输出 " Emma"，行为是 " Emma" 的 logit 减去另一个名字的 logit。对每个 prompt，demo 保留激活最强的 16 个特征，抽 384 个子集，并把 SAE 坐标与 8 个随机旋转比较。`python demo/demo.py` 跑第 4 和第 10 层，GPU 上约一分钟，CPU 上约五分钟。加上 `--layers 4 6 8 10` 会跑论文用到的全部四层。
 
 ```bash
-python demo.py --layers 4 6 8 10
+python demo/demo.py --layers 4 6 8 10
 ```
 
 ```text

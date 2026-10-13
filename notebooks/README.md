@@ -1,6 +1,6 @@
 # SAR Colab notebooks
 
-These notebooks extend SAR without changing the original `sar.py`, `demo.py`, paper results, or tutorial website.
+These notebooks extend SAR without changing the original `sar.py`, `demo/demo.py`, paper results, or tutorial website.
 
 | Notebook | Best for | Open |
 |---|---|---|

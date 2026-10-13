@@ -237,14 +237,14 @@ g = np.array([behavior(x) for x in h_tilde])     # run the upper layers and read
 r = sar(g, masks, fit, held)
 ```
 
-In [`demo.py`](demo.py) these two steps are `top_contributions` and `behavior`, the only functions to replace for
+In [`demo/demo.py`](demo/demo.py) these two steps are `top_contributions` and `behavior`, the only functions to replace for
 another model, SAE or behavior. For the rotated coordinates, `rotation(K)` returns a random $`Q`$ and the contributions
 become `Q.T @ delta`.
 
 👉 On GPT-2 Small
 
 ```bash
-python demo.py
+python demo/demo.py
 ```
 
 ---
@@ -365,14 +365,14 @@ Prompt level Spearman correlations pooled over six SAEs at Gemma-3 1B layer 17, 
 
 ## 🧪 Demo
 
-`demo.py` runs GPT-2 Small with its public SAE on 24 copying prompts that we wrote, such as "Alice Emma Alice". The model
+`demo/demo.py` runs GPT-2 Small with its public SAE on 24 copying prompts that we wrote, such as "Alice Emma Alice". The model
 should continue with " Emma", and the behavior is the logit of " Emma" minus the logit of a third name. For each prompt
 the demo keeps the 16 most active features, samples 384 subsets, and compares the SAE coordinates with 8 random
-rotations. `python demo.py` covers layers 4 and 10 and takes about a minute on a GPU and five on a CPU. The option
+rotations. `python demo/demo.py` covers layers 4 and 10 and takes about a minute on a GPU and five on a CPU. The option
 `--layers 4 6 8 10` adds the other two layers used in the paper.
 
 ```bash
-python demo.py --layers 4 6 8 10
+python demo/demo.py --layers 4 6 8 10
 ```
 
 ```text
