@@ -159,7 +159,8 @@ python demo.py
 
 ## 📊 主要结果
 
-#### 🧠 Figure 2. 行为组合性随行为和表示而变化
+<details>
+<summary>🧠 Figure 2. 行为组合性随行为和表示而变化</summary>
 
 每种组合 1,000 个 prompt 的 $`\widehat{\mathrm{SAR}}_1`$ 中位数。
 
@@ -171,7 +172,10 @@ python demo.py
 
 $`\widehat{\mathrm{SAR}}_1`$ 在全部 57 个模型、层和行为组合中都大于零，仿射对照则停在数值零。它的大小同时取决于行为和模型。
 
-#### 🧭 Figure 3. 组合性取决于坐标的选择
+</details>
+
+<details>
+<summary>🧭 Figure 3. 组合性取决于坐标的选择</summary>
 
 SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100 个 prompt，每个 prompt 8 个旋转。
 
@@ -183,11 +187,17 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 
 每一对比较中，选中的子空间、总贡献和上层都相同，只换了坐标。18 个设置中 SAE 坐标的残差都更低。
 
-#### 📉 Figure 4. 估计的 SAR 与一阶解释的保真度相关
+</details>
+
+<details>
+<summary>📉 Figure 4. 估计的 SAR 与一阶解释的保真度相关</summary>
 
 从 $`\widehat{\mathrm{SAR}}_1`$ 最低的十分位到最高的十分位，一阶排序保真度在 Gemma-3 4B 上从 0.9857 降到 0.9539，在 Mistral-7B 上从 0.9939 降到 0.9413，在 Llama-3.1 8B 上从 0.9790 降到 0.9289。选择遗憾在 Gemma 和 Llama 上约翻一倍，在 Mistral 上约增加到五倍。
 
-#### 🤝 Figure 5. 特征对补回缺失的组合结构
+</details>
+
+<details>
+<summary>🤝 Figure 5. 特征对补回缺失的组合结构</summary>
 
 | 18 个设置的平均 | 一阶 | 成对 |
 |---|:---:|:---:|
@@ -196,7 +206,10 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 
 成对模型在全部 18 个设置中也降低了排序错误和符号错误，这些改进在全部 20 次重新划分子集后都成立。
 
-#### 🪜 Figures 6 and 7. 估计的组合性随深度变化
+</details>
+
+<details>
+<summary>🪜 Figures 6 and 7. 估计的组合性随深度变化</summary>
 
 简单复制在最早和最晚采样层上的结果。
 
@@ -207,7 +220,10 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 
 在 Figure 6 的 9 组从浅到深的比较中，$`\widehat{\mathrm{SAR}}_1`$ 有 8 组下降，$`\widehat\rho_2`$ 9 组全部上升。在全部 33 个模型、行为和层的比较中，SAE 坐标的 $`\widehat{\mathrm{SAR}}_1`$ 都低于旋转。
 
-#### 🎛️ Table 1. 成对建模更好地预测组合 steering 的结果
+</details>
+
+<details>
+<summary>🎛️ Table 1. 成对建模更好地预测组合 steering 的结果</summary>
 
 Llama-3.1 8B 上 16 个已发表的 CorrSteer 特征，1,024 种 steering 组合，1,400 道 MMLU-Pro 题。
 
@@ -216,7 +232,10 @@ Llama-3.1 8B 上 16 个已发表的 CorrSteer 特征，1,024 种 steering 组合
 | 一阶 | 0.6424 | 0.5874 | 0.1444 |
 | 成对 | **0.3891** | **0.7790** | **0.0606** |
 
-#### 🔬 Table 2 and Figure 8. 重建质量与 SAR 在可比的 SAE 上表现不同
+</details>
+
+<details>
+<summary>🔬 Table 2 and Figure 8. 重建质量与 SAR 在可比的 SAE 上表现不同</summary>
 
 Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，每种行为 1,800 个 prompt。
 
@@ -225,6 +244,8 @@ Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，
 | 简单复制 | −0.080 | **0.269** | 0.011 | **0.220** |
 | 主谓一致 | −0.114 | **0.430** | 0.005 | **0.235** |
 | IOI | −0.013 | **0.396** | 0.028 | **0.199** |
+
+</details>
 
 ---
 

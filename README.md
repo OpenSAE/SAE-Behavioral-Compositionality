@@ -195,7 +195,8 @@ python demo.py
 
 ## 📊 Main Results
 
-#### 🧠 Figure 2. Behavioral compositionality varies across behaviors and representations
+<details>
+<summary>🧠 Figure 2. Behavioral compositionality varies across behaviors and representations</summary>
 
 Prompt median $`\widehat{\mathrm{SAR}}_1`$ with 1,000 prompts for each combination.
 
@@ -208,7 +209,10 @@ Prompt median $`\widehat{\mathrm{SAR}}_1`$ with 1,000 prompts for each combinati
 $`\widehat{\mathrm{SAR}}_1`$ is positive in all 57 model, layer and behavior combinations, while affine controls stay at
 numerical zero. Its size depends on both the behavior and the model.
 
-#### 🧭 Figure 3. Compositionality depends on coordinate choice
+</details>
+
+<details>
+<summary>🧭 Figure 3. Compositionality depends on coordinate choice</summary>
 
 Median $`\widehat{\mathrm{SAR}}_1`$ for SAE coordinates and for random rotations, with 100 prompts and eight rotations
 per prompt.
@@ -222,13 +226,19 @@ per prompt.
 The selected subspace, the total contribution and the upper layers are the same in each pair. Only the coordinates
 change, and the SAE coordinates have the lower residual in all 18 settings.
 
-#### 📉 Figure 4. Estimated SAR is associated with first order coalition fidelity
+</details>
+
+<details>
+<summary>📉 Figure 4. Estimated SAR is associated with first order coalition fidelity</summary>
 
 From the lowest to the highest $`\widehat{\mathrm{SAR}}_1`$ decile, first order rank fidelity falls from 0.9857 to 0.9539
 in Gemma-3 4B, from 0.9939 to 0.9413 in Mistral-7B, and from 0.9790 to 0.9289 in Llama-3.1 8B. Selection regret
 roughly doubles in Gemma and Llama and grows about fivefold in Mistral.
 
-#### 🤝 Figure 5. Feature pairs recover missing coalition structure
+</details>
+
+<details>
+<summary>🤝 Figure 5. Feature pairs recover missing coalition structure</summary>
 
 | Average over 18 settings | First order | Pairwise |
 |---|:---:|:---:|
@@ -238,7 +248,10 @@ roughly doubles in Gemma and Llama and grows about fivefold in Mistral.
 Pairwise models also lower ordering error and sign error in all 18 settings, and the gains hold in all 20 repeated
 splits of the subsets.
 
-#### 🪜 Figures 6 and 7. Estimated compositionality varies across depth
+</details>
+
+<details>
+<summary>🪜 Figures 6 and 7. Estimated compositionality varies across depth</summary>
 
 Simple copying at the earliest and latest sampled layers.
 
@@ -251,7 +264,10 @@ Across the nine early to late comparisons of Figure 6, $`\widehat{\mathrm{SAR}}_
 increases in all nine. SAE coordinates have lower $`\widehat{\mathrm{SAR}}_1`$ than rotations in all 33 model, behavior
 and layer comparisons.
 
-#### 🎛️ Table 1. Pairwise modeling better predicts the aggregate steering response
+</details>
+
+<details>
+<summary>🎛️ Table 1. Pairwise modeling better predicts the aggregate steering response</summary>
 
 Sixteen published CorrSteer features in Llama-3.1 8B, 1,024 steering combinations, and 1,400 MMLU-Pro questions.
 
@@ -260,7 +276,10 @@ Sixteen published CorrSteer features in Llama-3.1 8B, 1,024 steering combination
 | First order | 0.6424 | 0.5874 | 0.1444 |
 | Pairwise | **0.3891** | **0.7790** | **0.0606** |
 
-#### 🔬 Table 2 and Figure 8. Reconstruction quality and SAR differ in a matched SAE comparison
+</details>
+
+<details>
+<summary>🔬 Table 2 and Figure 8. Reconstruction quality and SAR differ in a matched SAE comparison</summary>
 
 Prompt level Spearman correlations pooled over six SAEs at Gemma-3 1B layer 17, with 1,800 prompts per behavior.
 
@@ -269,6 +288,8 @@ Prompt level Spearman correlations pooled over six SAEs at Gemma-3 1B layer 17, 
 | Simple copying | −0.080 | **0.269** | 0.011 | **0.220** |
 | Subject verb agreement | −0.114 | **0.430** | 0.005 | **0.235** |
 | IOI | −0.013 | **0.396** | 0.028 | **0.199** |
+
+</details>
 
 ---
 
