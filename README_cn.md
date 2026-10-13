@@ -1,11 +1,8 @@
-# 🔥 SAR：稀疏自编码器表示的行为组合性
+# 稀疏自编码器表示的行为组合性
 
-**Haotian Ma, Ziye Mei, Frederic Sala**<br>
-University of Wisconsin–Madison
+🌍 Languages: [English](README.md) | [中文](README_cn.md) |
 
-🌍 [English](README.md) | [中文](README_cn.md) &nbsp; [![tests](https://github.com/UniqueMax2005/sar-compositionality/actions/workflows/tests.yml/badge.svg)](https://github.com/UniqueMax2005/sar-compositionality/actions/workflows/tests.yml)
-
-👉 一句话总结。SAE 特征是线性解码的，但它们对模型行为的影响不一定能相加。我们提出 SAE 可加性残差 SAR，用来衡量单个特征效应解释不了的行为变化。在全部 18 个模型与行为设置中，学到的 SAE 坐标留下的残差都比同一子空间的随机旋转更小。但 SAE 坐标并不完全可加，加入特征对之后，留出子集上的预测在每个设置和组合 steering 实验中都更好。
+👉 一句话总结。SAE 特征是线性解码的，但它们对模型行为的影响取决于彼此的交互。我们提出 **SAE 可加性残差（SAR）**，用来衡量单个特征效应解释不了的行为变化。
 
 <p align="center">
   <b>📄 arXiv 论文即将上线</b> &nbsp; | &nbsp;
@@ -51,14 +48,6 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 
 ---
 
-## 💡 为什么用 SAR？
-
-稀疏自编码器把模型激活分解成稀疏、线性解码的特征。人们用这些坐标检查模型的计算，组合出多特征解释，也用它们操控行为。这就引出一个基本问题。如果已知单个特征的效应，能否把它们相加来预测联合效应？线性的 SAE 解码器回答不了这个问题，因为 SAE 之后的计算会让特征效应互相加强、抑制或依赖。
-
-现有的 SAE 评估衡量重建、稀疏性和可解释性，但不能告诉我们单独刻画的特征何时能组合成可信的联合解释或干预。SAR 在下游行为上直接回答这个问题。对每个 prompt，我们保留选中 SAE 贡献的不同子集，固定激活的其余部分，再衡量行为中有多少是单个特征效应解释不了的。
-
----
-
 ## 📐 SAR 衡量什么
 
 🎯 **干预方式。** 对 prompt $`x`$，记 $`h_x`$ 为某一层某个 token 的激活。SAE 用特征激活 $`z_i(x)`$ 和解码方向 $`d_i`$ 来表示它。记 $`N_x`$ 为激活最强的 $`K`$ 个特征，它们的解码贡献为 $`\delta_i(x)=z_i(x)d_i`$。保留子集 $`S\subseteq N_x`$ 得到
@@ -81,7 +70,7 @@ $`\mathrm{SAR}_1`$ 是单个特征效应解释不了的行为方差占比，$`\r
 |---|---|---|
 | 排序保真度 | $`F^{(r)}_{\mathrm{rank}}=\mathrm{Spearman}_{S\in\mathcal U}\big(\widehat a_r(S),g_x(S)\big)`$ | 等于 1 表示模型把所有留出子集都排对了 |
 | 排序错误 | $`\mathcal E(a)=\mathbb E\big[(\Delta g)^2\,\mathbf 1\{\Delta g\,\Delta a\le 0\}\big]/(2V)`$ | 排反的子集对，按两者的行为差加权 |
-| 符号错误 | 满足 $`\operatorname{sign}e(S)\ne\operatorname{sign}\widehat e_r(S)`$ 的 $`S\in\mathcal U`$ 所占比例，其中 $`e(S)=g_x(S)-g_x(N_x)`$，$`\widehat e_r(S)=\widehat a_r(S)-\widehat a_r(N_x)`$ | 模型把变化的方向判断反了 |
+| 符号错误 | 满足 $`\mathrm{sign}\,e(S)\ne\mathrm{sign}\,\widehat e_r(S)`$ 的 $`S\in\mathcal U`$ 所占比例，其中 $`e(S)=g_x(S)-g_x(N_x)`$，$`\widehat e_r(S)=\widehat a_r(S)-\widehat a_r(N_x)`$ | 模型把变化的方向判断反了 |
 | 选择遗憾 | $`\big(g_x(S^\star)-g_x(\widehat S_r)\big)/\big(\max_{\mathcal U}g_x-\min_{\mathcal U}g_x\big)`$ | 按模型挑出的子集比真正最好的子集差多少 |
 
 这里 $`\Delta g=g_x(S)-g_x(T)`$，$`\Delta a=a(S)-a(T)`$，$`S`$ 和 $`T`$ 是两个独立抽取的子集。$`S^\star`$ 是留出子集中真正最好的子集，$`\widehat S_r`$ 是模型排在第一的子集。论文证明了 $`\mathcal E(\Pi_r g_x)\le\mathrm{SAR}_r`$。

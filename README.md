@@ -1,15 +1,8 @@
-# 🔥 SAR: Behavioral Compositionality of Sparse Autoencoder Representations
+# Behavioral Compositionality of Sparse Autoencoder Representations
 
-**Haotian Ma, Ziye Mei, Frederic Sala**<br>
-University of Wisconsin–Madison
+🌍 Languages: [English](README.md) | [中文](README_cn.md) |
 
-🌍 [English](README.md) | [中文](README_cn.md) &nbsp; [![tests](https://github.com/UniqueMax2005/sar-compositionality/actions/workflows/tests.yml/badge.svg)](https://github.com/UniqueMax2005/sar-compositionality/actions/workflows/tests.yml)
-
-👉 TL;DR. SAE features are decoded linearly, but their effects on model behavior need not add up. We introduce SAE
-Additivity Residuals (SAR), which measure the behavioral variation left unexplained by individual feature effects.
-Learned SAE coordinates leave less of this residual than random rotations of the same subspace in all 18 model and
-behavior settings. They are still not fully additive, and modeling feature pairs gives better held out predictions in
-every setting and in a combined steering experiment.
+👉 TL;DR. SAE features are decoded linearly, but their effects on model behavior depend on their interactions. We introduce **SAE Additivity Residuals (SAR)** to measure the behavioral variation left unexplained by individual feature effects.
 
 <p align="center">
   <b>📄 arXiv paper coming soon</b> &nbsp; | &nbsp;
@@ -63,21 +56,6 @@ works offline.
 
 ---
 
-## 💡 Why SAR?
-
-Sparse autoencoders decompose model activations into sparse, linearly decoded features. These coordinates are used to
-inspect computation, build multi-feature explanations, and manipulate behavior. This raises a basic question. If the
-effects of individual features are known, can their joint effect be predicted by summing them? A linear SAE decoder
-does not answer this, because the computation after the SAE can make feature effects reinforce, suppress, or depend on
-one another.
-
-Existing SAE evaluations measure reconstruction, sparsity, and interpretability. They do not tell us when
-independently characterized features can be composed into faithful joint explanations or interventions. SAR answers
-this in the downstream behavior. For each prompt we keep different subsets of the selected SAE contributions, hold the
-rest of the activation fixed, and measure how much of the behavior is left unexplained by individual feature effects.
-
----
-
 ## 📐 What SAR Measures
 
 🎯 **The intervention.** For a prompt $`x`$, let $`h_x`$ be the activation at a chosen layer and token. An SAE writes it with
@@ -109,7 +87,7 @@ orders and selects subsets.
 |---|---|---|
 | Rank fidelity | $`F^{(r)}_{\mathrm{rank}}=\mathrm{Spearman}_{S\in\mathcal U}\big(\widehat a_r(S),g_x(S)\big)`$ | 1 means the model orders all held out subsets correctly |
 | Ordering error | $`\mathcal E(a)=\mathbb E\big[(\Delta g)^2\,\mathbf 1\{\Delta g\,\Delta a\le 0\}\big]/(2V)`$ | Wrongly ordered pairs of subsets, weighted by their behavior difference |
-| Sign error | Share of $`S\in\mathcal U`$ with $`\operatorname{sign}e(S)\ne\operatorname{sign}\widehat e_r(S)`$, where $`e(S)=g_x(S)-g_x(N_x)`$ and $`\widehat e_r(S)=\widehat a_r(S)-\widehat a_r(N_x)`$ | The model gets the direction of the change wrong |
+| Sign error | Share of $`S\in\mathcal U`$ with $`\mathrm{sign}\,e(S)\ne\mathrm{sign}\,\widehat e_r(S)`$, where $`e(S)=g_x(S)-g_x(N_x)`$ and $`\widehat e_r(S)=\widehat a_r(S)-\widehat a_r(N_x)`$ | The model gets the direction of the change wrong |
 | Selection regret | $`\big(g_x(S^\star)-g_x(\widehat S_r)\big)/\big(\max_{\mathcal U}g_x-\min_{\mathcal U}g_x\big)`$ | Loss from picking the subset the model ranks first |
 
 Here $`\Delta g=g_x(S)-g_x(T)`$ and $`\Delta a=a(S)-a(T)`$ for two independent subsets $`S`$ and $`T`$, $`S^\star`$ is the best
