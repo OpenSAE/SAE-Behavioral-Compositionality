@@ -1,6 +1,6 @@
 # 稀疏自编码器表示的行为组合性
 
-🌍 Languages: [English](README.md) | [中文](README_cn.md) |
+🌍 Languages: [English](README.md) | [中文](README_cn.md)
 
 👉 一句话总结。SAE 特征是线性解码的，但它们对模型行为的影响可能取决于彼此的交互。我们提出 **SAE 可加性残差（SAR）**，用来衡量单个特征效应解释不了的行为变化。
 
