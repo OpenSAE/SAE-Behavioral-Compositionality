@@ -5,7 +5,7 @@
 👉 TL;DR. SAE features are decoded linearly, but their effects on model behavior may depend on mutual interactions. We introduce **SAE Additivity Residuals (SAR)** to measure the behavioral variation left unexplained by individual feature effects.
 
 <p align="center">
-  <b>📄 arXiv paper coming soon</b> &nbsp; | &nbsp;
+  <a href="https://arxiv.org/abs/2610.21261"><b>📄 Paper (arXiv)</b></a> &nbsp; | &nbsp;
   <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5-minute tutorial</b></a> &nbsp; | &nbsp;
   <a href="#-demo"><b>🧪 Demo</b></a>
 </p>
@@ -451,3 +451,20 @@ It uses the open SAEs for [GPT-2 Small](https://huggingface.co/jbloom/GPT2-Small
 [CounterFact](https://rome.baulab.info), [IOI](https://arxiv.org/abs/2211.00593) and
 [MMLU-Pro](https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro) data, and the
 [CorrSteer](https://arxiv.org/abs/2508.12535) steering features.
+
+---
+
+## 📚 Citation
+
+If you use this work, please cite the paper:
+
+```bibtex
+@misc{ma2026behavioral,
+  title = {Behavioral Compositionality of Sparse Autoencoder Representations},
+  author = {Haotian Ma and Ziye Mei and Frederic Sala},
+  year = {2026},
+  eprint = {2610.21261},
+  archivePrefix = {arXiv},
+  url = {https://arxiv.org/abs/2610.21261}
+}
+```
