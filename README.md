@@ -256,6 +256,10 @@ python demo/demo.py
 
 <br>
 
+<p align="center">
+  <img src="assets/figures/fig2.png" alt="Figure 2" width="900"/>
+</p>
+
 Prompt median $`\widehat{\mathrm{SAR}}_1`$ with 1,000 prompts for each combination.
 
 | | Simple copying | Subject verb agreement | Gendered pronoun | CounterFact | IOI | Greater than |
@@ -273,6 +277,10 @@ numerical zero. Its size depends on both the behavior and the model.
 <summary>🧭 Figure 3. Compositionality depends on coordinate choice</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig3.png" alt="Figure 3" width="900"/>
+</p>
 
 Median $`\widehat{\mathrm{SAR}}_1`$ for SAE coordinates and for random rotations, with 100 prompts and eight rotations
 per prompt.
@@ -293,6 +301,10 @@ change, and the SAE coordinates have the lower residual in all 18 settings.
 
 <br>
 
+<p align="center">
+  <img src="assets/figures/fig4.png" alt="Figure 4" width="900"/>
+</p>
+
 From the lowest to the highest $`\widehat{\mathrm{SAR}}_1`$ decile, first order rank fidelity falls from 0.9857 to 0.9539
 in Gemma-3 4B, from 0.9939 to 0.9413 in Mistral-7B, and from 0.9790 to 0.9289 in Llama-3.1 8B. Selection regret
 roughly doubles in Gemma and Llama and grows about fivefold in Mistral.
@@ -303,6 +315,10 @@ roughly doubles in Gemma and Llama and grows about fivefold in Mistral.
 <summary>🤝 Figure 5. Feature pairs recover missing coalition structure</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig5.png" alt="Figure 5" width="900"/>
+</p>
 
 | Average over 18 settings | First order | Pairwise |
 |---|:---:|:---:|
@@ -318,6 +334,14 @@ splits of the subsets.
 <summary>🪜 Figures 6 and 7. Estimated compositionality varies across depth</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig6.png" alt="Figure 6" width="900"/>
+</p>
+
+<p align="center">
+  <img src="assets/figures/fig7.png" alt="Figure 7" width="900"/>
+</p>
 
 Simple copying at the earliest and latest sampled layers.
 
@@ -350,6 +374,10 @@ Sixteen published CorrSteer features in Llama-3.1 8B, 1,024 steering combination
 <summary>🔬 Table 2 and Figure 8. Reconstruction quality and SAR differ in a matched SAE comparison</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig8.png" alt="Figure 8" width="900"/>
+</p>
 
 Prompt level Spearman correlations pooled over six SAEs at Gemma-3 1B layer 17, with 1,800 prompts per behavior.
 
@@ -409,6 +437,11 @@ $`\widehat\rho_2`$ from 0.3437 to 0.9491 between layers 4 and 10.
 
 ## 🗺️ Figure Map
 
+<details>
+<summary>📋 Figure index and captions</summary>
+
+<br>
+
 Captions are taken from the paper.
 
 | Figure | Caption | In the demo |
@@ -422,6 +455,8 @@ Captions are taken from the paper.
 | [Figure&nbsp;7](assets/figures/fig7.png) | Simple copying at the earliest and latest sampled layers across seven model and SAE pipelines. | ✅ GPT-2 row |
 | [Figure&nbsp;8](assets/figures/fig8.png) | Median prompt level $`\mathrm{FVU}_x`$ and median $`\widehat{\mathrm{SAR}}_1`$ for six SAEs at Gemma-3 1B layer 17. | |
 | [Figure&nbsp;9](assets/figures/fig9.png) | Behavior scores for four examples under ablations of individual features and feature pairs, together with first order and pairwise predictions when available. | |
+
+</details>
 
 <details>
 <summary>Show all figures</summary>
