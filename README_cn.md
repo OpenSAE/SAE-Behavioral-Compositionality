@@ -45,54 +45,7 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 - 🧭 **坐标有影响。** 在全部 18 个模型与行为设置中，学到的 SAE 坐标的一阶残差都低于同一子空间、总和不变的随机旋转。
 - 🤝 **特征对补回缺失的结构。** 成对项把留出子集上的平均排序保真度从 0.9782 提高到 0.9959，并在全部 18 个设置中胜过参数量相同、改用随机三阶项的模型。
 - 🎛️ **Steering 也适用。** 对 Llama-3.1 8B 上 16 个已发表的 SAE steering 特征，成对建模把 MMLU-Pro 上的排序保真度从 0.5874 提高到 0.7790。
-- 🔬 **超出重建质量。** 在 6 个可比的 SAE 上，# 稀疏自编码器表示的行为组合性
-
-🌍 Languages: [English](README.md) | [中文](README_cn.md)
-
-👉 一句话总结。SAE 特征是线性解码的，但它们对模型行为的影响可能取决于彼此的交互。我们提出 **SAE 可加性残差（SAR）**，用来衡量单个特征效应解释不了的行为变化。
-
-<p align="center">
-  <a href="https://arxiv.org/abs/2610.21261"><b>📄 论文 (arXiv)</b></a> &nbsp; | &nbsp;
-  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5 分钟讲解</b></a> &nbsp; | &nbsp;
-  <a href="assets/demo/README.md"><b>🧪 示例</b></a>
-</p>
-
-## 🎥 概览
-
-<p align="center">
-  <img src="assets/figures/fig1.png" alt="Figure 1" width="900"/>
-</p>
-
-**Figure 1.** Behavioral compositionality in SAE coordinates. (a) Selected decoded contributions are retained or
-removed while all other activation content is fixed, and the patched activation is propagated through the frozen upper
-layers to obtain $`g_x(S)`$. (b, c) Nearly additive and interacting responses, showing the first order fit, pairwise
-interactions, and variance decomposition. $`\mathrm{SAR}_1`$ is the residual beyond individual features and
-$`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
-
-图注为论文原文。
-
----
-
-## 🎞️ 5 分钟讲解
-
-<p align="center">
-  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><img src="assets/tour_preview.png" alt="5 分钟讲解" width="900"/></a>
-</p>
-
-💻 点击在浏览器中打开[讲解](https://opensae.github.io/SAE-Behavioral-Compositionality/)
-
-☁️ **Colab 在线体验：** [交互式入门](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/SAR_Quickstart.ipynb) · [使用自己的 SAE](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/Use_Your_Own_SAE.ipynb)
-
----
-
-## ✨ 亮点
-
-- 🧮 **精确的交互分解。** 特征被独立随机保留时，$`\mathrm{SAR}_r`$ 恰好等于 $`r`$ 阶以上交互的归一化能量，并且给最优 $`r`$ 阶近似的组合排序错误设了上界。
-- 📏 **仿射对照。** 仿射读出的 $`\widehat{\mathrm{SAR}}_1`$ 停在数值零，最大为 $`1.55\times10^{-13}`$。真实行为在全部 57 个模型、层和行为组合中 $`\widehat{\mathrm{SAR}}_1`$ 都大于零。
-- 🧭 **坐标有影响。** 在全部 18 个模型与行为设置中，学到的 SAE 坐标的一阶残差都低于同一子空间、总和不变的随机旋转。
-- 🤝 **特征对补回缺失的结构。** 成对项把留出子集上的平均排序保真度从 0.9782 提高到 0.9959，并在全部 18 个设置中胜过参数量相同、改用随机三阶项的模型。
-- 🎛️ **Steering 也适用。** 对 Llama-3.1 8B 上 16 个已发表的 SAE steering 特征，成对建模把 MMLU-Pro 上的排序保真度从 0.5874 提高到 0.7790。
-- 🔬 \widehat{\mathrm{SAR}}_1`$ 与符号错误及选择遗憾的相关性均强于重建误差。
+- 🔬 **超出重建质量。** 在 6 个可比的 SAE 上，$`\widehat{\mathrm{SAR}}_1`$ 与符号错误及选择遗憾的相关性均强于重建误差。
 - ⚡ **代码很小。** 估计器是一个只依赖 NumPy 的文件 [`sar.py`](sar.py)。GPT-2 demo 在 GPU 上约一分钟跑完。
 
 ---
@@ -376,6 +329,11 @@ Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，
 
 ## 🗺️ 图表索引
 
+<details>
+<summary>📋 图表与图注</summary>
+
+<br>
+
 图注取自论文原文。
 
 | 图 | 图注 | Demo 中 |
@@ -389,6 +347,8 @@ Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，
 | [Figure&nbsp;7](assets/figures/fig7.png) | Simple copying at the earliest and latest sampled layers across seven model and SAE pipelines. | ✅ GPT-2 一行 |
 | [Figure&nbsp;8](assets/figures/fig8.png) | Median prompt level $`\mathrm{FVU}_x`$ and median $`\widehat{\mathrm{SAR}}_1`$ for six SAEs at Gemma-3 1B layer 17. | |
 | [Figure&nbsp;9](assets/figures/fig9.png) | Behavior scores for four examples under ablations of individual features and feature pairs, together with first order and pairwise predictions when available. | |
+
+</details>
 
 <details>
 <summary>展开所有图</summary>
