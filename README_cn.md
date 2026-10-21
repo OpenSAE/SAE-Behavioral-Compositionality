@@ -5,9 +5,9 @@
 👉 一句话总结。SAE 特征是线性解码的，但它们对模型行为的影响可能取决于彼此的交互。我们提出 **SAE 可加性残差（SAR）**，用来衡量单个特征效应解释不了的行为变化。
 
 <p align="center">
-  <b>📄 arXiv 论文即将上线</b> &nbsp; | &nbsp;
+  <a href="https://arxiv.org/abs/2610.21261"><b>📄 论文 (arXiv)</b></a> &nbsp; | &nbsp;
   <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5 分钟讲解</b></a> &nbsp; | &nbsp;
-  <a href="assets/demo/README.md"><b>🧪 Examples</b></a>
+  <a href="assets/demo/README.md"><b>🧪 示例</b></a>
 </p>
 
 ## 🎥 概览
@@ -41,11 +41,58 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 ## ✨ 亮点
 
 - 🧮 **精确的交互分解。** 特征被独立随机保留时，$`\mathrm{SAR}_r`$ 恰好等于 $`r`$ 阶以上交互的归一化能量，并且给最优 $`r`$ 阶近似的组合排序错误设了上界。
-- 📏 **经过校准。** 仿射读出的 $`\widehat{\mathrm{SAR}}_1`$ 停在数值零，最大为 $`1.55\times10^{-13}`$。真实行为在全部 57 个模型、层和行为组合中 $`\widehat{\mathrm{SAR}}_1`$ 都大于零。
+- 📏 **仿射对照。** 仿射读出的 $`\widehat{\mathrm{SAR}}_1`$ 停在数值零，最大为 $`1.55\times10^{-13}`$。真实行为在全部 57 个模型、层和行为组合中 $`\widehat{\mathrm{SAR}}_1`$ 都大于零。
 - 🧭 **坐标有影响。** 在全部 18 个模型与行为设置中，学到的 SAE 坐标的一阶残差都低于同一子空间、总和不变的随机旋转。
 - 🤝 **特征对补回缺失的结构。** 成对项把留出子集上的平均排序保真度从 0.9782 提高到 0.9959，并在全部 18 个设置中胜过参数量相同、改用随机三阶项的模型。
 - 🎛️ **Steering 也适用。** 对 Llama-3.1 8B 上 16 个已发表的 SAE steering 特征，成对建模把 MMLU-Pro 上的排序保真度从 0.5874 提高到 0.7790。
-- 🔬 **不同于重建质量。** 在 6 个可比的 SAE 上，$`\widehat{\mathrm{SAR}}_1`$ 与符号错误和选择遗憾相关，重建误差则不相关。
+- 🔬 **超出重建质量。** 在 6 个可比的 SAE 上，# 稀疏自编码器表示的行为组合性
+
+🌍 Languages: [English](README.md) | [中文](README_cn.md)
+
+👉 一句话总结。SAE 特征是线性解码的，但它们对模型行为的影响可能取决于彼此的交互。我们提出 **SAE 可加性残差（SAR）**，用来衡量单个特征效应解释不了的行为变化。
+
+<p align="center">
+  <a href="https://arxiv.org/abs/2610.21261"><b>📄 论文 (arXiv)</b></a> &nbsp; | &nbsp;
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5 分钟讲解</b></a> &nbsp; | &nbsp;
+  <a href="assets/demo/README.md"><b>🧪 示例</b></a>
+</p>
+
+## 🎥 概览
+
+<p align="center">
+  <img src="assets/figures/fig1.png" alt="Figure 1" width="900"/>
+</p>
+
+**Figure 1.** Behavioral compositionality in SAE coordinates. (a) Selected decoded contributions are retained or
+removed while all other activation content is fixed, and the patched activation is propagated through the frozen upper
+layers to obtain $`g_x(S)`$. (b, c) Nearly additive and interacting responses, showing the first order fit, pairwise
+interactions, and variance decomposition. $`\mathrm{SAR}_1`$ is the residual beyond individual features and
+$`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
+
+图注为论文原文。
+
+---
+
+## 🎞️ 5 分钟讲解
+
+<p align="center">
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><img src="assets/tour_preview.png" alt="5 分钟讲解" width="900"/></a>
+</p>
+
+💻 点击在浏览器中打开[讲解](https://opensae.github.io/SAE-Behavioral-Compositionality/)
+
+☁️ **Colab 在线体验：** [交互式入门](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/SAR_Quickstart.ipynb) · [使用自己的 SAE](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/Use_Your_Own_SAE.ipynb)
+
+---
+
+## ✨ 亮点
+
+- 🧮 **精确的交互分解。** 特征被独立随机保留时，$`\mathrm{SAR}_r`$ 恰好等于 $`r`$ 阶以上交互的归一化能量，并且给最优 $`r`$ 阶近似的组合排序错误设了上界。
+- 📏 **仿射对照。** 仿射读出的 $`\widehat{\mathrm{SAR}}_1`$ 停在数值零，最大为 $`1.55\times10^{-13}`$。真实行为在全部 57 个模型、层和行为组合中 $`\widehat{\mathrm{SAR}}_1`$ 都大于零。
+- 🧭 **坐标有影响。** 在全部 18 个模型与行为设置中，学到的 SAE 坐标的一阶残差都低于同一子空间、总和不变的随机旋转。
+- 🤝 **特征对补回缺失的结构。** 成对项把留出子集上的平均排序保真度从 0.9782 提高到 0.9959，并在全部 18 个设置中胜过参数量相同、改用随机三阶项的模型。
+- 🎛️ **Steering 也适用。** 对 Llama-3.1 8B 上 16 个已发表的 SAE steering 特征，成对建模把 MMLU-Pro 上的排序保真度从 0.5874 提高到 0.7790。
+- 🔬 \widehat{\mathrm{SAR}}_1`$ 与符号错误及选择遗憾的相关性均强于重建误差。
 - ⚡ **代码很小。** 估计器是一个只依赖 NumPy 的文件 [`sar.py`](sar.py)。GPT-2 demo 在 GPU 上约一分钟跑完。
 
 ---
@@ -147,7 +194,7 @@ $`\mathrm{SAR}_1`$ 是单个特征效应解释不了的行为方差占比，$`\r
 
 <br>
 
-SAE 的质量通常用重建误差来报告。我们在 Gemma-3 1B 同一位置的 6 个 SAE 上，比较重建误差和 $`\widehat{\mathrm{SAR}}_1`$ 与一阶解释的两种失误有多大关系。数字是三种行为上按 prompt 计算的 Spearman 相关。
+重建误差衡量 SAE 还原模型激活的准确程度，却不能直接衡量解码特征对下游行为的效应是否可加。我们在 Gemma-3 1B 同一位置的 6 个 SAE 上，比较重建误差和 $`\widehat{\mathrm{SAR}}_1`$ 与一阶解释的两种失误有多大关系。数字是三种行为上按 prompt 计算的 Spearman 相关。
 
 | 指标 | 衡量什么 | 与符号错误 | 与选择遗憾 |
 |---|---|:---:|:---:|
@@ -200,6 +247,10 @@ print("Pairs explain interactions:", result.metrics["sar2"] < 1e-16)
 
 <br>
 
+<p align="center">
+  <img src="assets/figures/fig2.png" alt="Figure 2" width="900"/>
+</p>
+
 每种组合 1,000 个 prompt 的 $`\widehat{\mathrm{SAR}}_1`$ 中位数。
 
 | | 简单复制 | 主谓一致 | 性别代词 | CounterFact | IOI | 大于比较 |
@@ -216,6 +267,10 @@ $`\widehat{\mathrm{SAR}}_1`$ 在全部 57 个模型、层和行为组合中都�
 <summary>🧭 Figure 3. 组合性取决于坐标的选择</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig3.png" alt="Figure 3" width="900"/>
+</p>
 
 SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100 个 prompt，每个 prompt 8 个旋转。
 
@@ -234,6 +289,10 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 
 <br>
 
+<p align="center">
+  <img src="assets/figures/fig4.png" alt="Figure 4" width="900"/>
+</p>
+
 从 $`\widehat{\mathrm{SAR}}_1`$ 最低的十分位到最高的十分位，一阶排序保真度在 Gemma-3 4B 上从 0.9857 降到 0.9539，在 Mistral-7B 上从 0.9939 降到 0.9413，在 Llama-3.1 8B 上从 0.9790 降到 0.9289。选择遗憾在 Gemma 和 Llama 上约翻一倍，在 Mistral 上约增加到五倍。
 
 </details>
@@ -242,6 +301,10 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 <summary>🤝 Figure 5. 特征对补回缺失的组合结构</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig5.png" alt="Figure 5" width="900"/>
+</p>
 
 | 18 个设置的平均 | 一阶 | 成对 |
 |---|:---:|:---:|
@@ -256,6 +319,14 @@ SAE 坐标与随机旋转的 $`\widehat{\mathrm{SAR}}_1`$ 中位数，每格 100
 <summary>🪜 Figures 6 and 7. 估计的组合性随深度变化</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig6.png" alt="Figure 6" width="900"/>
+</p>
+
+<p align="center">
+  <img src="assets/figures/fig7.png" alt="Figure 7" width="900"/>
+</p>
 
 简单复制在最早和最晚采样层上的结果。
 
@@ -286,6 +357,10 @@ Llama-3.1 8B 上 16 个已发表的 CorrSteer 特征，1,024 种 steering 组合
 <summary>🔬 Table 2 and Figure 8. 重建质量与 SAR 在可比的 SAE 上表现不同</summary>
 
 <br>
+
+<p align="center">
+  <img src="assets/figures/fig8.png" alt="Figure 8" width="900"/>
+</p>
 
 Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，每种行为 1,800 个 prompt。
 

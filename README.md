@@ -41,7 +41,7 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
 - 🧮 **An exact interaction decomposition.** Under independent feature subset sampling, $`\mathrm{SAR}_r`$ equals the
   normalized energy of interactions above order $`r`$. It also bounds coalition ordering error for the best order $`r`$
   approximation.
-- 📏 **Calibrated.** Affine readouts give $`\widehat{\mathrm{SAR}}_1`$ at numerical zero, at most $`1.55\times10^{-13}`$.
+- 📏 **Affine controls.** Affine readouts give $`\widehat{\mathrm{SAR}}_1`$ at numerical zero, at most $`1.55\times10^{-13}`$.
   Real behaviors give a positive $`\widehat{\mathrm{SAR}}_1`$ in all 57 model, layer and behavior combinations.
 - 🧭 **SAE coordinates matter.** Learned SAE coordinates have lower first order residuals than sum preserving random
   rotations of the same subspace in all 18 model and behavior settings.
@@ -49,8 +49,59 @@ $`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
   They also outperform parameter matched models with random third order terms in all 18 settings.
 - 🎛️ **Steering.** For 16 published SAE steering features in Llama-3.1 8B, pairwise modeling raises rank fidelity on
   MMLU-Pro from 0.5874 to 0.7790.
-- 🔬 **Different from reconstruction.** Across six matched SAEs, $`\widehat{\mathrm{SAR}}_1`$ is related to sign error and
-  selection regret. Reconstruction error is not.
+- 🔬 **Beyond reconstruction.** Across six matched SAEs, # 🧩 Behavioral Compositionality of Sparse Autoencoder Representations
+
+🌍 Languages: [English](README.md) | [中文](README_cn.md)
+
+👉 TL;DR. SAE features are decoded linearly, but their effects on model behavior may depend on mutual interactions. We introduce **SAE Additivity Residuals (SAR)** to measure the behavioral variation left unexplained by individual feature effects.
+
+<p align="center">
+  <a href="https://arxiv.org/abs/2610.21261"><b>📄 Paper (arXiv)</b></a> &nbsp; | &nbsp;
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5-minute tutorial</b></a> &nbsp; | &nbsp;
+  <a href="assets/demo/README.md"><b>🧪 Examples</b></a>
+</p>
+
+## 🎥 Overview
+
+<p align="center">
+  <img src="assets/figures/fig1.png" alt="Figure 1" width="900"/>
+</p>
+
+**Figure 1.** Behavioral compositionality in SAE coordinates. (a) Selected decoded contributions are retained or
+removed while all other activation content is fixed, and the patched activation is propagated through the frozen upper
+layers to obtain $`g_x(S)`$. (b, c) Nearly additive and interacting responses, showing the first order fit, pairwise
+interactions, and variance decomposition. $`\mathrm{SAR}_1`$ is the residual beyond individual features and
+$`\rho_2=\Delta_2/\mathrm{SAR}_1`$ its pairwise share.
+
+---
+
+## 🎞️ 5-Minute Tutorial
+
+<p align="center">
+  <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><img src="assets/tour_preview.png" alt="5-minute tutorial" width="900"/></a>
+</p>
+
+💻 Click to open the [tutorial](https://opensae.github.io/SAE-Behavioral-Compositionality/) in your browser
+
+☁️ **Try SAR in Colab:** [Interactive quickstart](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/SAR_Quickstart.ipynb) · [Use your own SAE](https://colab.research.google.com/github/OpenSAE/SAE-Behavioral-Compositionality/blob/main/notebooks/Use_Your_Own_SAE.ipynb)
+
+---
+
+## ✨ Highlights
+
+- 🧮 **An exact interaction decomposition.** Under independent feature subset sampling, $`\mathrm{SAR}_r`$ equals the
+  normalized energy of interactions above order $`r`$. It also bounds coalition ordering error for the best order $`r`$
+  approximation.
+- 📏 **Affine controls.** Affine readouts give $`\widehat{\mathrm{SAR}}_1`$ at numerical zero, at most $`1.55\times10^{-13}`$.
+  Real behaviors give a positive $`\widehat{\mathrm{SAR}}_1`$ in all 57 model, layer and behavior combinations.
+- 🧭 **SAE coordinates matter.** Learned SAE coordinates have lower first order residuals than sum preserving random
+  rotations of the same subspace in all 18 model and behavior settings.
+- 🤝 **Pairs recover missing structure.** Pairwise terms raise the average held out rank fidelity from 0.9782 to 0.9959.
+  They also outperform parameter matched models with random third order terms in all 18 settings.
+- 🎛️ **Steering.** For 16 published SAE steering features in Llama-3.1 8B, pairwise modeling raises rank fidelity on
+  MMLU-Pro from 0.5874 to 0.7790.
+- 🔬 **Beyond reconstruction.** \widehat{\mathrm{SAR}}_1`$ is more strongly associated with
+  sign error and selection regret than reconstruction error.
 - ⚡ **Small code.** The estimator is one NumPy file, [`sar.py`](sar.py). The GPT-2 demo runs in about a minute on a GPU.
 
 ---
@@ -173,7 +224,8 @@ the same number of random terms of three features. All models are fit on the sam
 
 <br>
 
-SAE quality is usually reported as reconstruction error. For six SAEs at the same Gemma-3 1B
+Reconstruction error measures how accurately an SAE represents model activations, but it does not directly
+measure whether decoded features have additive downstream effects. For six SAEs at the same Gemma-3 1B
 site, we compare how reconstruction error and $`\widehat{\mathrm{SAR}}_1`$ relate to two failures of first order
 explanations. The numbers are prompt level Spearman correlations over three behaviors.
 

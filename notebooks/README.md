@@ -15,4 +15,3 @@ These notebooks extend SAR without changing the original `sar.py`, `assets/demo/
 
 **Limitations:** Notebook execution with actual public pretrained weights depends on external downloads and compatible GPU/CPU runtime. Unit tests validate the adapter math and a fully simulated intervention backend; they do not substitute for an online Colab smoke test. For full experimental reproduction, see the source paper; these notebooks are teaching and integration examples.
 
-**Colab URLs become live after these new notebook files are committed to the public repository.**

@@ -1,6 +1,6 @@
 # SAR core API
 
-The standalone estimator is [`sar.py`](../sar.py). It accepts a scalar behavior for each binary feature coalition and does not depend on PyTorch:
+The standalone estimator is [`sar.py`](../sar.py). It accepts a scalar behavior for each binary feature coalition and does not depend on PyTorch. The following is an integration template, not a standalone example: `g` must contain the `M` model scores for the sampled coalitions, and `full_behavior` is the score with all selected contributions retained.
 
 ```python
 from sar import coalitions, sar
