@@ -41,7 +41,7 @@ def test_quickstart_matches_readme():
 @pytest.mark.parametrize("readme", ["README.md", "README_cn.md"])
 def test_readme_quickstart_prints_what_it_says(readme, capsys):
     text = (Path(__file__).parents[1] / readme).read_text(encoding="utf8")
-    code = re.search(r"## 🚀 [^\n]+\n\n```python\n(.*?)```", text, re.S).group(1)
+    code = re.search(r"## 🚀 [^\n]+[\s\S]*?```python\n(.*?)```", text, re.S).group(1)
     exec(compile(code, readme, "exec"), {})
     expected = [line[2:] for line in code.splitlines() if line.startswith("# ")]
     assert capsys.readouterr().out.splitlines() == expected

@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://arxiv.org/abs/2610.21261"><b>📄 Paper (arXiv)</b></a> &nbsp; | &nbsp;
   <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5-minute tutorial</b></a> &nbsp; | &nbsp;
-  <a href="#-demo"><b>🧪 Demo</b></a>
+  <a href="assets/demo/README.md"><b>🧪 Examples</b></a>
 </p>
 
 ## 🎥 Overview
@@ -186,66 +186,38 @@ explanations. The numbers are prompt level Spearman correlations over three beha
 
 ---
 
-## ⚙️ Install
-
-```bash
-git clone https://github.com/UniqueMax2005/sar-compositionality.git
-cd sar-compositionality
-python -m venv .venv && source .venv/bin/activate    # on Windows .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-`sar.py` needs only NumPy. The demo also needs PyTorch, TransformerLens, SAE Lens and Matplotlib.
-[`requirements_demo.txt`](requirements_demo.txt) pins the exact versions behind the demo output below, run with
-Python 3.12. The tests check the properties the paper relies on. Affine behaviors give zero residual, pairwise games are
-recovered exactly by pairs, and rotations keep the span and the sum of the contributions.
-
-```bash
-python -m pytest
-```
-
----
-
 ## 🚀 Quickstart
+
+Clone the repository and install the NumPy core:
+
+```bash
+git clone https://github.com/OpenSAE/SAE-Behavioral-Compositionality.git
+cd SAE-Behavioral-Compositionality
+python -m pip install numpy
+```
+
+Provide the activation at an SAE site, an SAE encoder and decoder, and a function that scores patched activations:
 
 ```python
 import numpy as np
-from sar import coalitions, sar
+from sar_runner import ActivationSite, FunctionalModelAdapter, FunctionalSAE, evaluate_sae
 
-masks, fit, held = coalitions(K=6)                                # 384 subsets, 256 to fit and 128 held out
-s = masks.astype(float)                                           # s[m, i] = 1 if subset m keeps feature i
-noise = 0.02 * np.random.default_rng(0).standard_normal(len(s))   # a little measurement noise
-g = s @ [1.0, 0.5, 1.0, -0.3, 0.2, 0.1] - 1.0 * s[:, 0] * s[:, 2] + noise  # features 0 and 2 are redundant
-
-r = sar(g, masks, fit, held)
-print(f"SAR_1 {r['sar1']:.3f}  SAR_2 {r['sar2']:.3f}  rho_2 {r['rho2']:.2f}")
-print(f"rank fidelity {r['rank1']:.3f} -> {r['rank2']:.3f}")
-# SAR_1 0.271  SAR_2 0.002  rho_2 0.99
-# rank fidelity 0.850 -> 0.991
+h = np.array([1.5, 1.0, 0.8, 0.6, 0.4, 0.3])
+model = FunctionalModelAdapter(
+    capture=lambda prompt: ActivationSite(activation=h),
+    score=lambda site, patched: patched.sum(axis=1) + 1.1 * patched[:, 0] * patched[:, 2],
+)
+sae = FunctionalSAE(encode_fn=lambda x: x, decoder=np.eye(6))
+result = evaluate_sae(model, sae, prompt="example", K=6, M=384, n_fit=256)
+print("Nonadditivity detected:", result.metrics["sar1"] > 0.01)
+print("Pairs explain interactions:", result.metrics["sar2"] < 1e-16)
+# Nonadditivity detected: True
+# Pairs explain interactions: True
 ```
 
-💡 Features 0 and 2 each add 1 on their own but only 1 together. The first order model leaves 27% of the held out variance
-unexplained, and pairs recover all of it except the measurement noise.
+Replace the example activation, encoder and decoder with your model's SAE site. The scorer must return one scalar per patched activation. `evaluate_sae` selects the top SAE contributions, evaluates held-out coalitions and returns first-order and pairwise residuals. The estimator alone is `sar(g, masks, fit, held)` in [`sar.py`](sar.py).
 
-🔌 **Your own model.** On a real model, `g` comes from the intervention above. Take the activation `h` at the SAE site
-and the $`K`$ decoded contributions `delta` with shape `(K, d)`. Each subset removes the contributions it leaves out,
-and your model turns each patched activation into one number.
-
-```python
-h_tilde = h - (~masks).astype(float) @ delta     # one patched activation per subset
-g = np.array([behavior(x) for x in h_tilde])     # run the upper layers and read a scalar
-r = sar(g, masks, fit, held)
-```
-
-In [`demo/demo.py`](demo/demo.py) these two steps are `top_contributions` and `behavior`, the only functions to replace for
-another model, SAE or behavior. For the rotated coordinates, `rotation(K)` returns a random $`Q`$ and the contributions
-become `Q.T @ delta`.
-
-👉 On GPT-2 Small
-
-```bash
-python demo/demo.py
-```
+[Core API and real-model adapters](docs/CORE_API.md) · [Runnable examples](assets/demo/README.md) · [Colab notebooks](notebooks/README.md)
 
 ---
 
@@ -388,50 +360,6 @@ Prompt level Spearman correlations pooled over six SAEs at Gemma-3 1B layer 17, 
 | IOI | −0.013 | **0.396** | 0.028 | **0.199** |
 
 </details>
-
----
-
-## 🧪 Demo
-
-`demo/demo.py` runs GPT-2 Small with its public SAE on 24 copying prompts that we wrote, such as "Alice Emma Alice". The model
-should continue with " Emma", and the behavior is the logit of " Emma" minus the logit of a third name. For each prompt
-the demo keeps the 16 most active features, samples 384 subsets, and compares the SAE coordinates with 8 random
-rotations. `python demo/demo.py` covers layers 4 and 10 and takes about a minute on a GPU and five on a CPU. The option
-`--layers 4 6 8 10` adds the other two layers used in the paper.
-
-```bash
-python demo/demo.py --layers 4 6 8 10
-```
-
-```text
-GPT-2 Small, 24 copying prompts, K = 16, 384 coalitions (256 fit, 128 held out)
-
-Layer  SAR_1 SAE  SAR_1 rotated  SAE lower   rho_2  affine SAR_1
-    4     0.3232         0.5652     24 / 24   0.383       2.3e-27
-    6     0.3236         0.3647     19 / 24   0.762       1.1e-26
-    8     0.0322         0.0685     21 / 24   0.918       1.0e-26
-   10     0.0148         0.0481     24 / 24   0.945       6.5e-26
-
-         Rank fidelity     Ordering error       Sign error      Selection regret
-Layer     first pairwise     first pairwise     first pairwise     first pairwise
-    4    0.7955   0.8519    0.0391   0.0187    0.2614   0.2002    0.1520   0.0632
-    6    0.8255   0.9150    0.0179   0.0046    0.2887   0.1895    0.1045   0.0424
-    8    0.9821   0.9959    0.0013   0.0001    0.0547   0.0309    0.0224   0.0034
-   10    0.9847   0.9967    0.0018   0.0002    0.0472   0.0254    0.0139   0.0017
-```
-
-The first table gives the median $`\widehat{\mathrm{SAR}}_1`$ in SAE and rotated coordinates, the number of prompts where
-the SAE value is lower, the median $`\widehat\rho_2`$, and the largest $`\widehat{\mathrm{SAR}}_1`$ of an affine readout. The
-second table gives the explanation fidelity metrics defined above, averaged over prompts.
-
-<p align="center">
-  <img src="assets/demo_layers4_6_8_10.png" alt="Demo output" width="900"/>
-</p>
-
-✅ The demo shows the same pattern as the paper. SAE coordinates have lower residuals than rotations,
-$`\widehat{\mathrm{SAR}}_1`$ falls and $`\widehat\rho_2`$ rises with depth, and pairwise models order held out subsets
-better at every layer. With 1,000 prompts the paper reports $`\widehat{\mathrm{SAR}}_1`$ going from 0.2978 to 0.01309 and
-$`\widehat\rho_2`$ from 0.3437 to 0.9491 between layers 4 and 10.
 
 ---
 

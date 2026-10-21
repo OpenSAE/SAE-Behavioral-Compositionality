@@ -7,7 +7,7 @@
 <p align="center">
   <b>📄 arXiv 论文即将上线</b> &nbsp; | &nbsp;
   <a href="https://opensae.github.io/SAE-Behavioral-Compositionality/"><b>🎞️ 5 分钟讲解</b></a> &nbsp; | &nbsp;
-  <a href="#-demo"><b>🧪 Demo</b></a>
+  <a href="assets/demo/README.md"><b>🧪 Examples</b></a>
 </p>
 
 ## 🎥 概览
@@ -158,58 +158,38 @@ SAE 的质量通常用重建误差来报告。我们在 Gemma-3 1B 同一位置�
 
 ---
 
-## ⚙️ 安装
-
-```bash
-git clone https://github.com/UniqueMax2005/sar-compositionality.git
-cd sar-compositionality
-python -m venv .venv && source .venv/bin/activate    # Windows 上用 .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-`sar.py` 只需要 NumPy。demo 另外需要 PyTorch、TransformerLens、SAE Lens 和 Matplotlib。[`requirements_demo.txt`](requirements_demo.txt) 固定了下面 demo 输出所用的确切版本，运行环境是 Python 3.12。测试检查论文依赖的数学性质：仿射行为的残差为零，成对博弈能被成对模型完全恢复，旋转保持贡献的子空间和总和不变。
-
-```bash
-python -m pytest
-```
-
----
-
 ## 🚀 快速上手
+
+克隆仓库并安装 NumPy 核心依赖：
+
+```bash
+git clone https://github.com/OpenSAE/SAE-Behavioral-Compositionality.git
+cd SAE-Behavioral-Compositionality
+python -m pip install numpy
+```
+
+提供 SAE 所在位置的激活、SAE 编码器与解码器，以及批量读取干预后标量行为的函数：
 
 ```python
 import numpy as np
-from sar import coalitions, sar
+from sar_runner import ActivationSite, FunctionalModelAdapter, FunctionalSAE, evaluate_sae
 
-masks, fit, held = coalitions(K=6)                                # 384 个子集，256 个拟合，128 个留出
-s = masks.astype(float)                                           # s[m, i] = 1 表示子集 m 保留特征 i
-noise = 0.02 * np.random.default_rng(0).standard_normal(len(s))   # 少量测量噪声
-g = s @ [1.0, 0.5, 1.0, -0.3, 0.2, 0.1] - 1.0 * s[:, 0] * s[:, 2] + noise  # 特征 0 和 2 是冗余的
-
-r = sar(g, masks, fit, held)
-print(f"SAR_1 {r['sar1']:.3f}  SAR_2 {r['sar2']:.3f}  rho_2 {r['rho2']:.2f}")
-print(f"rank fidelity {r['rank1']:.3f} -> {r['rank2']:.3f}")
-# SAR_1 0.271  SAR_2 0.002  rho_2 0.99
-# rank fidelity 0.850 -> 0.991
+h = np.array([1.5, 1.0, 0.8, 0.6, 0.4, 0.3])
+model = FunctionalModelAdapter(
+    capture=lambda prompt: ActivationSite(activation=h),
+    score=lambda site, patched: patched.sum(axis=1) + 1.1 * patched[:, 0] * patched[:, 2],
+)
+sae = FunctionalSAE(encode_fn=lambda x: x, decoder=np.eye(6))
+result = evaluate_sae(model, sae, prompt="example", K=6, M=384, n_fit=256)
+print("Nonadditivity detected:", result.metrics["sar1"] > 0.01)
+print("Pairs explain interactions:", result.metrics["sar2"] < 1e-16)
+# Nonadditivity detected: True
+# Pairs explain interactions: True
 ```
 
-💡 特征 0 和 2 单独各加 1，同时保留也只加 1。一阶模型留下 27% 的留出方差解释不了，加入特征对后除测量噪声外全部补回。
+将示例激活、编码器和解码器替换为自己的 SAE 与模型，评分函数对每个被干预的激活返回一个标量。 `evaluate_sae` 自动执行特征选择、子集干预、一阶与二阶残差计算；低层估计器是 [`sar.py`](sar.py) 中的 `sar(g, masks, fit, held)`。
 
-🔌 **接入自己的模型。** 在真实模型上，`g` 来自上面的干预。取 SAE 位置的激活 `h` 和 $`K`$ 个解码贡献 `delta`，形状为 `(K, d)`。每个子集去掉它没有保留的贡献，再由你的模型把每个修改后的激活变成一个数。
-
-```python
-h_tilde = h - (~masks).astype(float) @ delta     # 每个子集一个修改后的激活
-g = np.array([behavior(x) for x in h_tilde])     # 跑完上层，读出一个标量
-r = sar(g, masks, fit, held)
-```
-
-在 [`demo/demo.py`](demo/demo.py) 里这两步就是 `top_contributions` 和 `behavior`，换模型、换 SAE 或换行为时只需要替换这两个函数。旋转坐标用 `rotation(K)` 得到随机的 $`Q`$，贡献换成 `Q.T @ delta`。
-
-👉 在 GPT-2 Small 上运行
-
-```bash
-python demo/demo.py
-```
+[核心 API 与真实模型适配](docs/CORE_API.md) · [可运行示例](assets/demo/README.md) · [Colab notebooks](notebooks/README.md)
 
 ---
 
@@ -316,41 +296,6 @@ Gemma-3 1B 第 17 层 6 个 SAE 合并，按 prompt 计算的 Spearman 相关，
 | IOI | −0.013 | **0.396** | 0.028 | **0.199** |
 
 </details>
-
----
-
-## 🧪 Demo
-
-`demo/demo.py` 用 GPT-2 Small 和它的公开 SAE，在我们写的 24 个复制型 prompt 上运行，例如 "Alice Emma Alice"。模型应当接着输出 " Emma"，行为是 " Emma" 的 logit 减去另一个名字的 logit。对每个 prompt，demo 保留激活最强的 16 个特征，抽 384 个子集，并把 SAE 坐标与 8 个随机旋转比较。`python demo/demo.py` 跑第 4 和第 10 层，GPU 上约一分钟，CPU 上约五分钟。加上 `--layers 4 6 8 10` 会跑论文用到的全部四层。
-
-```bash
-python demo/demo.py --layers 4 6 8 10
-```
-
-```text
-GPT-2 Small, 24 copying prompts, K = 16, 384 coalitions (256 fit, 128 held out)
-
-Layer  SAR_1 SAE  SAR_1 rotated  SAE lower   rho_2  affine SAR_1
-    4     0.3232         0.5652     24 / 24   0.383       2.3e-27
-    6     0.3236         0.3647     19 / 24   0.762       1.1e-26
-    8     0.0322         0.0685     21 / 24   0.918       1.0e-26
-   10     0.0148         0.0481     24 / 24   0.945       6.5e-26
-
-         Rank fidelity     Ordering error       Sign error      Selection regret
-Layer     first pairwise     first pairwise     first pairwise     first pairwise
-    4    0.7955   0.8519    0.0391   0.0187    0.2614   0.2002    0.1520   0.0632
-    6    0.8255   0.9150    0.0179   0.0046    0.2887   0.1895    0.1045   0.0424
-    8    0.9821   0.9959    0.0013   0.0001    0.0547   0.0309    0.0224   0.0034
-   10    0.9847   0.9967    0.0018   0.0002    0.0472   0.0254    0.0139   0.0017
-```
-
-第一张表依次是 SAE 坐标和旋转坐标的 $`\widehat{\mathrm{SAR}}_1`$ 中位数、SAE 更低的 prompt 数、$`\widehat\rho_2`$ 中位数，以及仿射读出的最大 $`\widehat{\mathrm{SAR}}_1`$。第二张表是上面定义的解释保真度指标在各 prompt 上的平均。
-
-<p align="center">
-  <img src="assets/demo_layers4_6_8_10.png" alt="Demo 输出" width="900"/>
-</p>
-
-✅ demo 呈现与论文相同的规律。SAE 坐标的残差低于旋转，$`\widehat{\mathrm{SAR}}_1`$ 随深度下降而 $`\widehat\rho_2`$ 上升，每一层的成对模型对留出子集的排序都更准。论文用 1,000 个 prompt 得到的结果是，从第 4 层到第 10 层 $`\widehat{\mathrm{SAR}}_1`$ 从 0.2978 降到 0.01309，$`\widehat\rho_2`$ 从 0.3437 升到 0.9491。
 
 ---
 
