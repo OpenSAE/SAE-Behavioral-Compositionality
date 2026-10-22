@@ -5,7 +5,7 @@ Runnable demonstrations are kept here, separate from the public estimator [`sar.
 Install the optional model dependencies from the repository root:
 
 ```bash
-python -m pip install -r requirements_demo.txt
+python -m pip install -r requirements.txt
 ```
 
 Run the public GPT-2 Small SAE experiment from the repository root:
@@ -20,3 +20,7 @@ The script evaluates 24 copying prompts, 16 SAE contributions and 384 coalitions
 The bundled [reference image](demo_layers4_6_8_10.png) is a recorded demonstration result, not the paper's complete evaluation. The current model or library versions may produce slightly different numbers. Notebook examples for custom SAE checkpoints are in [`notebooks/`](../../notebooks/README.md).
 
 For embedding SAR in another project, use the single [Quickstart](../../README.md#-quickstart) or the [core API contract](../../docs/CORE_API.md).
+
+## Recorded demo environment
+
+The bundled figure was generated with Python 3.12.10 and CUDA 12.8, using NumPy 2.5.0, Matplotlib 3.11.0, PyTorch 2.11.0, TransformerLens 3.5.0, SAE Lens 6.44.4, and pytest 9.1.1. These exact versions document the original run. The root `requirements.txt` uses minimum versions for general installation. For GPU PyTorch, select the build for your CUDA installation before installing the other dependencies.

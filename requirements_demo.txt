@@ -1,8 +1,0 @@
-# Exact versions behind the demo output in the README, run with Python 3.12.10 and CUDA 12.8.
-# For a GPU build of torch, install it first from https://pytorch.org, then install this file.
-numpy==2.5.0
-matplotlib==3.11.0
-torch==2.11.0
-transformer-lens==3.5.0
-sae-lens==6.44.4
-pytest==9.1.1
